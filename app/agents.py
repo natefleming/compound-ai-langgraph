@@ -12,7 +12,7 @@ from app.router import filter_out_routes
 from app.messages import add_name
 from app.tools import create_genie_tool, create_vector_search_tool
 from app.prompts import genie_prompt, vector_search_prompt
-
+from app.state import AgentState
 
 class AgentBase(ABC):
 
@@ -43,16 +43,28 @@ class Agent(AgentBase):
     self.tools = tools
 
   def as_runnable(self) -> RunnableSequence:
-    def _get_messages(messages: List[BaseMessage]) -> List[BaseMessage]:
+    def _get_messages(state: AgentState) -> Dict[str, Any]:
+      print(f"_get_messages: state= {state}")
+      messages: List[BaseMessage] = state["messages"]
+      print(f"_get_messages: messages= {messages}")
       if self.prompt is not None:
-        return [SystemMessage(content=self.prompt)] + messages
-      else:
-        return messages
-    
+        messages = [SystemMessage(content=self.prompt)] + messages
+          
+      # model_name: str = config.get("configurable", {}).get("model_name", "anthropic")
+      # llm: BaseChatModel = get_llm(model_name)
+
+      print("_get_messages: invoking chain...")
+      response: BaseMessage = self.llm.invoke(messages)
+      print(f"_get_messages: response={response}")
+      return {
+        "messages": [response],
+        "sender": self.name,
+      }
+
     chain: RunnableSequence = (
       RunnableLambda(filter_out_routes) | 
       RunnableLambda(_get_messages) | 
-      self.llm.bind_tools(self.tools) | 
+      self.llm.bind_tools(self.tools) |
       partial(add_name, name=self.name)
     )
     

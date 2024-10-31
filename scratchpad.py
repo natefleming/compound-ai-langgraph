@@ -118,6 +118,11 @@ speech_to_text_chain: RunnableSequence = RunnableLambda(speech_to_text)
 
 # COMMAND ----------
 
+
+
+
+# COMMAND ----------
+
 from importlib import reload
 
 import app.llms
@@ -127,6 +132,7 @@ import app.agents
 import app.prompts
 import app.router
 import app.genie_utils
+import app.state
 
 reload(app.llms)
 reload(app.graph)
@@ -135,10 +141,7 @@ reload(app.agents)
 reload(app.prompts)
 reload(app.router)
 reload(app.genie_utils)
-
-
-
-# COMMAND ----------
+reload(app.state)
 
 from typing import Any, Dict, Optional
 import os
@@ -192,9 +195,9 @@ vector_search_agent: Agent = create_vector_search_agent(
 
 builder: GraphBuilder = (
   GraphBuilder(llm=llm)
-    .add_agent(vector_search_agent)
-    .add_agent(genie_agent)
-    #.with_debug()
+    # .add_agent(vector_search_agent)
+    # .add_agent(genie_agent)
+    .with_debug()
     #.with_memory()
 )
 
@@ -203,6 +206,44 @@ graph: StateGraph = builder.build()
 chain: RunnableSequence = graph.as_chain()
 
 mlflow.models.set_model(chain)
+
+# COMMAND ----------
+
+from typing import List
+
+from langchain_core.messages import HumanMessage
+
+
+message: str = "How many rows of documentation are there in the genie space?"
+messages: List[HumanMessage] = [HumanMessage(content=message)]
+config: Dict[str, Any] = {
+    "configurable": {"thread_id": 42}
+}
+
+input_example = {
+        "messages": [
+            {
+                "role": "user",
+                "content": "How many rows of documentation are there in the genie space?",
+            }
+        ]
+    }
+
+# Use the Runnable
+final_state = chain.invoke(
+    input_example,
+    #{"messages": messages},
+            # {
+            #     "role": "user",
+            #     "content": "How many rows of documentation are there in the genie space?",
+            # },
+   # config=config,
+)
+
+# final_state: List[BaseMessage] = graph.invoke(messages, config=config)
+# final_state[-1].content
+
+
 
 # COMMAND ----------
 
@@ -233,44 +274,6 @@ print(genie_agent.as_runnable().invoke(messages))
 genie_tool = genie_agent.tools[0]
 print(type(genie_tool))
 genie_tool.run("How many rows of documentation are there in the genie space?")
-
-# COMMAND ----------
-
-from typing import List
-
-from langchain_core.messages import HumanMessage
-
-
-message: str = "How many rows of documentation are there in the genie space?"
-messages: List[HumanMessage] = [HumanMessage(content=message)]
-config: Dict[str, Any] = {
-    "configurable": {"thread_id": 42}
-}
-
-input_example = {
-        "messages": [
-            {
-                "role": "user",
-                "content": "How many rows of documentation are there in the genie space?",
-            }
-        ]
-    }
-
-# Use the Runnable
-final_state = chain.invoke(
-    #input_example,
-    #{"messages": messages},
-            {
-                "role": "user",
-                "content": "How many rows of documentation are there in the genie space?",
-            },
-   # config=config,
-)
-
-# final_state: List[BaseMessage] = graph.invoke(messages, config=config)
-# final_state[-1].content
-
-
 
 # COMMAND ----------
 

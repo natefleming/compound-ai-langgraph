@@ -1,4 +1,11 @@
-from typing import Callable, Dict, List, Optional, Union
+from typing import (
+  Callable, 
+  Dict, 
+  List, 
+  Optional, 
+  Union, 
+  Literal
+)
 from functools import partial
 
 from langchain_core.messages import BaseMessage
@@ -21,8 +28,11 @@ from app.router import route
 from app.agents import Agent, create_agent
 from app.prompts import router_prompt
 from app.tools import create_router_tool
-from app.messages import latest_message_content, first_message
-
+from app.messages import (
+  latest_message_content, 
+  first_message
+)
+from app.state import AgentState
 
 def _display(self, verbose: bool = False) -> None:
   from IPython.display import Image, display
@@ -34,7 +44,8 @@ def _as_chain(self) -> RunnableSequence:
     RunnableLambda(partial(latest_message_content, self)) |
     ChatCompletionsOutputParser()
   )
-  return chain
+  return self
+  #return chain
 
 # monkey patch 
 CompiledStateGraph.as_chain = _as_chain
@@ -44,7 +55,7 @@ class GraphBuilder(object):
 
   def __init__(self, llm: BaseChatModel) -> None:
     self._llm = llm
-    self._graph: StateGraph = MessageGraph()
+    self._graph: StateGraph = StateGraph(AgentState)
     self._agents: List[Agent] = []
     self._memory: Optional[MemorySaver] = None
     self._debug: bool = False
