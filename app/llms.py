@@ -4,8 +4,10 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 from langchain_databricks import ChatDatabricks
 
+EndpointOrAlias = str
+
 def get_llm(
-  model_name: Literal["llama", "gpt4"] = "llama",
+  model_name: EndpointOrAlias = "llama",
   base_url: Optional[str] = None,
   api_key: Optional[str] = None,
 ) -> BaseChatModel:
@@ -14,11 +16,13 @@ def get_llm(
       llm: BaseChatModel = ChatDatabricks(
         endpoint="databricks-meta-llama-3-1-70b-instruct",
       )
-    case "gpt4":
+    case "openai":
       llm: BaseChatModel = ChatOpenAI(
         model="gpt-4o",
       )
     case _:
-      raise ValueError(f"Invalid model_name: {model_name}")
+      llm: BaseChatModel = ChatDatabricks(
+        endpoint=model_name,
+      )
 
   return llm

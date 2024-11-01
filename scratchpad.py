@@ -169,7 +169,7 @@ genie_workspace_host: Optional[str] = databricks_resources.get("genie_workspace_
 
 llm_endpoint_name: str = databricks_resources.get("llm_endpoint_name")
 
-llm: BaseChatModel = get_llm("gpt4") #llm_endpoint_name
+llm: BaseChatModel = get_llm(llm_endpoint_name)
 
 genie_agent: Agent = create_genie_agent(
     llm=llm,
@@ -206,7 +206,45 @@ mlflow.models.set_model(chain)
 
 # COMMAND ----------
 
-graph.display()
+from typing import List
+
+from langchain_core.messages import HumanMessage
+
+
+message: str = "How many rows of documentation are there in the genie space?"
+messages: List[HumanMessage] = [HumanMessage(content=message)]
+config: Dict[str, Any] = {
+    "configurable": {"thread_id": 42}
+}
+
+input_example = {
+        "messages": [
+            {
+                "role": "user",
+                "content": "How many rows of documentation are there in the genie space?",
+            }
+        ]
+    }
+
+# Use the Runnable
+final_state = chain.invoke(
+    #input_example,
+    {"messages": messages},
+            # {
+            #     "role": "user",
+            #     "content": "How many rows of documentation are there in the genie space?",
+            # },
+   # config=config,
+)
+
+# final_state: List[BaseMessage] = graph.invoke(messages, config=config)
+# final_state[-1].content
+
+
+
+# COMMAND ----------
+
+graph.display(verbose=True)
 
 # COMMAND ----------
 
@@ -233,44 +271,6 @@ print(genie_agent.as_runnable().invoke(messages))
 genie_tool = genie_agent.tools[0]
 print(type(genie_tool))
 genie_tool.run("How many rows of documentation are there in the genie space?")
-
-# COMMAND ----------
-
-from typing import List
-
-from langchain_core.messages import HumanMessage
-
-
-message: str = "How many rows of documentation are there in the genie space?"
-messages: List[HumanMessage] = [HumanMessage(content=message)]
-config: Dict[str, Any] = {
-    "configurable": {"thread_id": 42}
-}
-
-input_example = {
-        "messages": [
-            {
-                "role": "user",
-                "content": "How many rows of documentation are there in the genie space?",
-            }
-        ]
-    }
-
-# Use the Runnable
-final_state = chain.invoke(
-    #input_example,
-    #{"messages": messages},
-            {
-                "role": "user",
-                "content": "How many rows of documentation are there in the genie space?",
-            },
-   # config=config,
-)
-
-# final_state: List[BaseMessage] = graph.invoke(messages, config=config)
-# final_state[-1].content
-
-
 
 # COMMAND ----------
 

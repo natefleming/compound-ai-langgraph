@@ -30,7 +30,7 @@ def _display(self, verbose: bool = False) -> None:
 
 def _as_chain(self) -> RunnableSequence:
   chain: RunnableSequence = (
-   # RunnableLambda(first_message) |
+    #RunnableLambda(first_message) |
     RunnableLambda(partial(latest_message_content, self)) |
     ChatCompletionsOutputParser()
   )

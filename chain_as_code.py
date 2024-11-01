@@ -16,7 +16,6 @@ from app.agents import (
   create_vector_search_agent
 )
 
-
 model_config_file: str = "model_config.yaml"
 model_config: ModelConfig = ModelConfig(development_config=model_config_file)
 
@@ -28,7 +27,7 @@ genie_workspace_host: Optional[str] = databricks_resources.get("genie_workspace_
 
 llm_endpoint_name: str = databricks_resources.get("llm_endpoint_name")
 
-llm: BaseChatModel = get_llm("gpt4") #llm_endpoint_name
+llm: BaseChatModel = get_llm(llm_endpoint_name)
 
 genie_agent: Agent = create_genie_agent(
     llm=llm,

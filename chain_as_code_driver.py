@@ -177,35 +177,42 @@ config: Dict[str, str] = {
     "thread_id": 42
 }
 
-
 response = loaded_model.predict(payload)
 
 # COMMAND ----------
 
-
-
-# COMMAND ----------
-
-from databricks.agents import deploy
-from mlflow.utils import databricks_utils as du
-import os
-from databricks.sdk.service.serving import EndpointStateReady, EndpointStateConfigUpdate
-from databricks.sdk import WorkspaceClient
-from databricks.sdk.errors import ResourceDoesNotExist, NotFound, PermissionDenied
 import os
 import time
 
+from mlflow.utils import databricks_utils as du
+
+
+from databricks.sdk.service.serving import EndpointStateReady, EndpointStateConfigUpdate
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.errors import ResourceDoesNotExist, NotFound, PermissionDenied
+from databricks.agents import deploy
+from databricks.agents.sdk_utils.entities import Deployment
+
+
 w: WorkspaceClient = WorkspaceClient()
 
-deployment = deploy(
+
+deployment: Deployment = deploy(
     registered_model_name, 
     latest_model_version,
-    # Just for testing and documentation, these env variables are not used in the application
     environment_vars={
-        # "DATABRICKS_TOKEN": "{{secrets/"+scope+"/databricks_token}}", 
-        # "DATABRICKS_HOST": "{{secrets/"+scope+"/databricks_host}}", 
+       # "DATABRICKS_TOKEN": f"{{secrets/{scope}/databricks_token}}", 
+       # "DATABRICKS_HOST": f"{{secrets/{scope}/databricks_host}}", 
+        "DATABRICKS_HOST": os.environ["DATABRICKS_HOST"], 
+        "DATABRICKS_TOKEN": os.environ["DATABRICKS_TOKEN"], 
     }
 )
+
+print(f"endpoint_name: {deployment.endpoint_name}")
+print(f"endpoint_url: {deployment.endpoint_url}")
+print(f"query_endpoint: {deployment.query_endpoint}")
+print(f"review_app_url: {deployment.review_app_url}")
+
 
 # query_endpoint is the URL that can be used to make queries to the app
 # deployment.query_endpoint
@@ -221,16 +228,66 @@ while w.serving_endpoints.get(deployment.endpoint_name).state.ready == EndpointS
 
 # COMMAND ----------
 
-from databricks.sdk.service.serving import ChatMessage, ChatMessageRole
+from typing import Dict 
 
-messages = []
-message = "What is the weather in SF?"
-messages.append(ChatMessage(content=message, role=ChatMessageRole.USER))
-response = w.serving_endpoints.query(
-    name="agents_nfleming-ace_hardware-ace_hardware_langraph",
-    messages=messages,
-    temperature=1.0,
-    stream=True,
-)
+import json
+import requests
 
-response
+from databricks.sdk import WorkspaceClient
+
+payload: Dict[str, str] = {
+    "messages": [
+        {
+            "role": "user",
+            "content": "How many rows of documentation are there in the genie space?",
+            #"content": "How can we optimize clusters in Databricks?",
+        }
+    ]
+}
+
+w: WorkspaceClient = WorkspaceClient()
+
+url = 'https://adb-984752964297111.11.azuredatabricks.net/serving-endpoints/agents_nfleming-ace_hardware-ace_hardware_langgraph/invocations'
+headers = {'Authorization': f'Bearer {os.environ.get("DATABRICKS_TOKEN")}', 'Content-Type': 'application/json'}
+response = requests.request(method='POST', headers=headers, url=url, json=payload)
+if response.status_code != 200:
+    raise Exception(f'Request failed with status {response.status_code}, {response.text}')
+
+print(response.content)
+
+# COMMAND ----------
+
+from typing import List
+
+from databricks.sdk.service.serving import ChatMessage, ChatMessageRole, QueryEndpointResponse, V1ResponseChoiceElement
+
+def ask(message: str) -> str:
+    messages: List[ChatMessage] = []
+
+    messages.append(ChatMessage(content=message, role=ChatMessageRole.USER))
+    response: QueryEndpointResponse = w.serving_endpoints.query(
+        name="agents_nfleming-ace_hardware-ace_hardware_langgraph",
+        messages=messages,
+        temperature=1.0,
+        stream=False,
+    )
+
+    choices: List[V1ResponseChoiceElement] = response.choices
+    respone_message: ChatMessage = choices[0].message
+    response_content: str = respone_message.content
+    return response_content
+
+# COMMAND ----------
+
+response: str = ask("How many rows of documentation are there in the genie space?")
+print(response)
+
+print("-" * 80)
+
+response: str = ask("How can you optimize a Databricks Cluster?")
+print(response)
+
+print("-" * 80)
+
+response: str = ask("What is the capitol of Indiana?")
+print(response)
