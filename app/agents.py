@@ -1,7 +1,8 @@
 
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Callable, Union
 from abc import ABC, abstractmethod
 from functools import partial
+from dataclasses import dataclass, field
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain.tools import Tool
@@ -14,19 +15,46 @@ from app.tools import create_genie_tool, create_vector_search_tool
 from app.prompts import genie_prompt, vector_search_prompt
 
 
+AgentOrString = Union['AgentBase', str]
+Condition = Callable[[List[BaseMessage]], str]
+RouteMapping = Dict[str, AgentOrString]
+AgentOrConditionalRoute = Union['AgentBase', 'ConditionalRoute']
+
+
+@dataclass
+class ConditionalRoute:
+  condition: Condition
+  route_mapping: RouteMapping
+
+
 class AgentBase(ABC):
 
   def __init__(self) -> None:
-    self._next: Optional[Agent] = None
+    self._direct_routes: List['AgentBase'] = []
+    self._conditional_routes: List[ConditionalRoute] = []
 
   @abstractmethod
   def as_runnable() -> RunnableSequence:
     ...
 
-  def then(self, next: 'AgentBase') -> 'AgentBase':
-    self._next = next
+  def then(
+    self, 
+    next_agent: AgentOrConditionalRoute
+  ) -> 'AgentBase':
+    if isinstance(next_agent, AgentBase):
+      self._direct_routes.append(next_agent)
+    else:
+      self._conditional_routes.append(next_agent)
     return next
 
+  @property
+  def direct_routes(self) -> List['Agent']:
+    return self._direct_routes
+
+  @property
+  def conditional_routes(self) -> List[ConditionalRoute]:
+    return self._conditional_routes
+  
 
 class Agent(AgentBase):
 
@@ -37,6 +65,7 @@ class Agent(AgentBase):
     prompt: Optional[str] = None, 
     tools: List[Tool] = []
   ) -> None:
+    super().__init__()
     self.name = name
     self.llm = llm
     self.prompt = prompt

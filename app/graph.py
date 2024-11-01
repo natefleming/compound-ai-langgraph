@@ -18,10 +18,15 @@ from mlflow.langchain.output_parsers import (
 )
 
 from app.router import route
-from app.agents import Agent, create_agent
 from app.prompts import router_prompt
 from app.tools import create_router_tool
 from app.messages import latest_message_content, first_message
+from app.agents import (
+    AgentBase, 
+    ConditionalRoute, 
+    AgentOrString,
+    create_agent
+)
 
 
 def _display(self, verbose: bool = False) -> None:
@@ -63,12 +68,12 @@ class GraphBuilder(object):
     def __init__(self, llm: BaseChatModel) -> None:
         self._llm = llm
         self._graph: StateGraph = MessageGraph()
-        self._agents: List[Agent] = []
+        self._agents: List[AgentBase] = []
         self._memory: Optional[MemorySaver] = None
         self._debug: bool = False
         self._entry_point: str = "router"
 
-    def add_agent(self, agent) -> "GraphBuilder":
+    def add_agent(self, agent: AgentBase) -> "GraphBuilder":
         self._agents.append(agent)
         return self
 
@@ -80,8 +85,8 @@ class GraphBuilder(object):
         self._debug = True
         return self
 
-    def with_entry_point(self, node: Union[str | Agent]) -> "GraphBuilder":
-        if isinstance(node, Agent):
+    def with_entry_point(self, node: AgentOrString) -> "GraphBuilder":
+        if isinstance(node, AgentBase):
             self._entry_point = node.name
         else:
             self._entry_point = node
@@ -101,6 +106,17 @@ class GraphBuilder(object):
 
         for agent in self.agents:
             self._graph.add_conditional_edges(agent.name, route, nodes)
+            for conditional_route in agent.conditional_routes:
+                conditional_route: ConditionalRoute
+                self._graph.add_conditional_edges(
+                    agent.name, 
+                    conditional_route.condition, 
+                    conditional_route.route_mapping
+                )
+            for direct_route in agent.direct_routes:
+                direct_route: AgentBase
+                self._graph.add_node(direct_route.as_runnable())
+                self._graph.add_edge(agent.name, direct_route.name)
 
         self._graph.add_node("tools", ToolNode(self.tools))
         self._graph.add_conditional_edges("tools", route, nodes)
@@ -113,18 +129,18 @@ class GraphBuilder(object):
 
         return compiled_state_graph
 
-    def router_agent(self) -> Agent:
+    def router_agent(self) -> AgentBase:
         prompt: str = router_prompt()
         router_tool: Tool = create_router_tool(choices=self.agents)
 
-        router_agent: Agent = create_agent(
+        router_agent: AgentBase = create_agent(
             name="router", llm=self._llm, prompt=prompt, tools=[router_tool]
         )
 
         return router_agent
 
     @property
-    def agents(self) -> List[Agent]:
+    def agents(self) -> List[AgentBase]:
         return self._agents
 
     @property
