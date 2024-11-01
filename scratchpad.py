@@ -30,14 +30,7 @@ from rich import print
 from dotenv import load_dotenv, find_dotenv
 
 
-
 _ = load_dotenv(find_dotenv())
-
-# COMMAND ----------
-
-vector_search_endpoint_name: str = "dbdemos_vs_endpoint" 
-vector_search_index: str = "dbdemos.dbdemos_rag_chatbot.databricks_documentation_vs_index"
-model_config_file: str = "model_config.yaml"
 
 # COMMAND ----------
 
@@ -56,27 +49,35 @@ print(f"base_url: {base_url}")
 
 # COMMAND ----------
 
+vector_search_endpoint_name: str = "dbdemos_vs_endpoint" 
+vector_search_index: str = "dbdemos.dbdemos_rag_chatbot.databricks_documentation_vs_index"
+model_config_file: str = "model_config.yaml"
+
+# COMMAND ----------
+
 from typing import Any, Dict
+import os
 
 import mlflow
 from mlflow.models import ModelConfig
 
 import yaml
 
+# Provided in .env file. This can be omitted from config and inferred by the GenieClient at runtime
+genie_space_id: str = os.environ["DATABRICKS_GENIE_SPACE_ID"]
+
 rag_chain_config: Dict[str, Any] = {
     "databricks_resources": {
         "llm_endpoint_name": "databricks-meta-llama-3-1-70b-instruct",
         "vector_search_endpoint_name": vector_search_endpoint_name,
-        "genie_space_id": "01ef9223c3d617e585962e672b22fd2a",
-        "genie_workspace_host": "adb-984752964297111.11.azuredatabricks.net"
+        "genie_space_id": genie_space_id, # Optional
+        "genie_workspace_host": workspace_host # Optional
     },
     "input_example": {
         "messages": [{"content": "Sample user question", "role": "user"}]
     },
     "llm_config": {
         "llm_parameters": {"max_tokens": 1500, "temperature": 0.01},
-        "llm_prompt_template": "You are a trusted AI assistant that helps answer questions based only on the provided information. If you do not know the answer to a question, you truthfully say you do not know. Here is the history of the current conversation you are having with your user: {chat_history}. And here is some context which may or may not help you answer the following question: {context}.  Answer directly, do not repeat the question, do not start with something like: the answer to the question, do not add AI in front of your answer, do not say: here is the answer, do not mention the context or the question. Based on this context, answer this question: {question}",
-        "llm_prompt_template_variables": ["context", "chat_history", "question"],
     },
     "retriever_config": {
         "chunk_template": "Passage: {chunk_text}\n",
@@ -194,7 +195,7 @@ builder: GraphBuilder = (
   GraphBuilder(llm=llm)
     .add_agent(vector_search_agent)
     .add_agent(genie_agent)
-    #.with_debug()
+    .with_debug()
     #.with_memory()
 )
 
@@ -229,11 +230,9 @@ input_example = {
 # Use the Runnable
 final_state = chain.invoke(
     #input_example,
-    {"messages": messages},
-            # {
-            #     "role": "user",
-            #     "content": "How many rows of documentation are there in the genie space?",
-            # },
+    #{"messages": messages},
+    messages[0]
+
    # config=config,
 )
 
@@ -267,7 +266,6 @@ print(genie_agent.as_runnable().invoke(messages))
 # COMMAND ----------
 
 
-
 genie_tool = genie_agent.tools[0]
 print(type(genie_tool))
 genie_tool.run("How many rows of documentation are there in the genie space?")
@@ -284,9 +282,6 @@ messages: List[HumanMessage] = [HumanMessage(content=message)]
 config: Dict[str, Any] = {
     "configurable": {"thread_id": 42}
 }
-
-# final_state: List[BaseMessage] = graph.invoke(messages, config=config)
-# final_state[-1].content
 
 response: Dict[str, Any] = chain.invoke(messages, config=config)
 response

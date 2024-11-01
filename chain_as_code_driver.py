@@ -213,18 +213,11 @@ print(f"endpoint_url: {deployment.endpoint_url}")
 print(f"query_endpoint: {deployment.query_endpoint}")
 print(f"review_app_url: {deployment.review_app_url}")
 
-
-# query_endpoint is the URL that can be used to make queries to the app
-# deployment.query_endpoint
-
-# Copy deployment.rag_app_url to browser and start interacting with your RAG application.
-# deployment.rag_app_url
-
 # Wait for the Review App to be ready
 print("\nWaiting for endpoint to deploy.  This can take 10 - 20 minutes.", end="")
 while w.serving_endpoints.get(deployment.endpoint_name).state.ready == EndpointStateReady.NOT_READY or w.serving_endpoints.get(deployment.endpoint_name).state.config_update == EndpointStateConfigUpdate.IN_PROGRESS:
     print(".", end="")
-    time.sleep(30)
+    time.sleep(60)
 
 # COMMAND ----------
 
@@ -239,16 +232,16 @@ payload: Dict[str, str] = {
     "messages": [
         {
             "role": "user",
-            "content": "How many rows of documentation are there in the genie space?",
-            #"content": "How can we optimize clusters in Databricks?",
+            #"content": "How many rows of documentation are there in the genie space?",
+            "content": "How can we optimize clusters in Databricks?",
         }
     ]
 }
 
 w: WorkspaceClient = WorkspaceClient()
 
-url = 'https://adb-984752964297111.11.azuredatabricks.net/serving-endpoints/agents_nfleming-ace_hardware-ace_hardware_langgraph/invocations'
-headers = {'Authorization': f'Bearer {os.environ.get("DATABRICKS_TOKEN")}', 'Content-Type': 'application/json'}
+url: str = f"https://{workspace_host}/serving-endpoints/agents_nfleming-ace_hardware-ace_hardware_langgraph/invocations"
+headers: Dict[str, str] = {'Authorization': f'Bearer {os.environ.get("DATABRICKS_TOKEN")}', 'Content-Type': 'application/json'}
 response = requests.request(method='POST', headers=headers, url=url, json=payload)
 if response.status_code != 200:
     raise Exception(f'Request failed with status {response.status_code}, {response.text}')
@@ -258,13 +251,19 @@ print(response.content)
 # COMMAND ----------
 
 from typing import List
+import json
 
+from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.serving import ChatMessage, ChatMessageRole, QueryEndpointResponse, V1ResponseChoiceElement
+
+
+w: WorkspaceClient = WorkspaceClient()
 
 def ask(message: str) -> str:
     messages: List[ChatMessage] = []
 
     messages.append(ChatMessage(content=message, role=ChatMessageRole.USER))
+    print(messages)
     response: QueryEndpointResponse = w.serving_endpoints.query(
         name="agents_nfleming-ace_hardware-ace_hardware_langgraph",
         messages=messages,
@@ -276,6 +275,21 @@ def ask(message: str) -> str:
     respone_message: ChatMessage = choices[0].message
     response_content: str = respone_message.content
     return response_content
+
+# COMMAND ----------
+
+messages: List[ChatMessage] = []
+
+message: str = "How many rows of documentation are there in the genie space?"
+messages.append(ChatMessage(content=message, role=ChatMessageRole.USER))
+response: QueryEndpointResponse = w.serving_endpoints.query(
+    name="agents_nfleming-ace_hardware-ace_hardware_langgraph",
+    messages=messages,
+    temperature=1.0,
+    stream=False,
+)
+response
+
 
 # COMMAND ----------
 
