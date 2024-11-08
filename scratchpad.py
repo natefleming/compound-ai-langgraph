@@ -197,6 +197,7 @@ builder: GraphBuilder = (
     .add_agent(genie_agent)
     .with_debug()
     #.with_memory()
+    
 )
 
 graph: StateGraph = builder.build()
