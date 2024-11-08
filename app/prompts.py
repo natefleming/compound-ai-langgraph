@@ -4,6 +4,15 @@ from textwrap import dedent
 from langchain.tools import Tool
 
 
+def unity_catalog_prompt() -> str:
+  prompt: str = dedent("""
+    Your job is to help a user find information from the Databricks Warehouse, Unity Catalog, UC or anything that can be solved with Python
+    You only have certain tools you can use.
+    If you are unable to help the user, you can say so.
+    """).strip()
+  return prompt
+
+
 def vector_search_prompt() -> str:
   prompt: str = dedent("""
     Your job is to help a user find information from Databricks Documentation.
@@ -33,6 +42,7 @@ def router_prompt() -> str:
 
     - If the user is asking about Databricks then call the router with `vector_search`
     - If the user is asking about genie then call the router with `genie`
+    - If the user is asking about unity catalog, warehouse, python or match then call the router with `unity_catalog`
     - If you are unable to help the user, you can say so.
     """).strip()
   return prompt

@@ -10,8 +10,8 @@ from langchain_core.messages import SystemMessage, BaseMessage
 
 from app.router import filter_out_routes
 from app.messages import add_name
-from app.tools import create_genie_tool, create_vector_search_tool
-from app.prompts import genie_prompt, vector_search_prompt
+from app.tools import create_genie_tool, create_vector_search_tool, create_unity_catalog_tools
+from app.prompts import genie_prompt, vector_search_prompt, unity_catalog_prompt
 
 
 class AgentBase(ABC):
@@ -67,12 +67,35 @@ def create_agent(
   return Agent(name=name, llm=llm, prompt=prompt, tools=tools)
 
 
+def create_unity_catalog_agent(
+    llm: BaseChatModel,
+    warehouse_id: str, 
+    functions: List[str],
+    name: Optional[str] = "unity_catalog"
+) -> Agent:
+    
+    unity_catalog_tools: List[Tool] = create_unity_catalog_tools(
+        warehouse_id=warehouse_id, 
+        functions=functions,
+    )
+    prompt: str = unity_catalog_prompt()
+
+    unity_catalog_agent: Agent = create_agent(
+        name=name, 
+        llm=llm, 
+        prompt=prompt, 
+        tools=unity_catalog_tools
+    )
+
+    return unity_catalog_agent
+  
 
 def create_genie_agent(
     llm: BaseChatModel,
     space_id: str, 
     workspace_host: Optional[str] = None,
     token: Optional[str] = None,
+    name: Optional[str] = "genie"
 ) -> Agent:
     
     genie_tool: Tool = create_genie_tool(
@@ -83,7 +106,7 @@ def create_genie_agent(
     prompt: str = genie_prompt(genie_tool.name)
 
     genie_agent: Agent = create_agent(
-        name="genie", 
+        name=name, 
         llm=llm, 
         prompt=prompt, 
         tools=[genie_tool]
@@ -97,7 +120,8 @@ def create_vector_search_agent(
   endpoint_name: str,
   index_name: str,
   columns: List[str] = None,
-  parameters: Dict[str, Any] = None
+  parameters: Dict[str, Any] = None,
+  name: Optional[str] = "vector_search",
 ) -> Agent:
 
   vector_search_tool: Tool = (
@@ -113,7 +137,7 @@ def create_vector_search_agent(
 
   vector_search_agent: Agent = (
     create_agent(
-      name="vector_search",
+      name=name,
       llm=llm, 
       prompt=prompt, 
       tools=[vector_search_tool]

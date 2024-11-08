@@ -51,6 +51,7 @@ print(f"base_url: {base_url}")
 
 from importlib import reload
 
+import app.tools
 import app.graph
 import app.messages
 import app.agents
@@ -58,6 +59,7 @@ import app.prompts
 import app.router
 import app.genie_utils
 
+reload(app.tools)
 reload(app.llms)
 reload(app.graph)
 reload(app.messages)
@@ -84,7 +86,7 @@ from mlflow.models.rag_signatures import (
 
 mlflow.set_registry_uri("databricks-uc")
 
-registered_model_name: str = "nfleming.ace_hardware.ace_hardware_langgraph"
+registered_model_name: str = "nfleming.default.compound_ai_langgraph"
 
 signature: ModelSignature = ModelSignature(
     inputs=ChatCompletionRequest(),
@@ -226,7 +228,6 @@ from typing import Dict
 import json
 import requests
 
-from databricks.sdk import WorkspaceClient
 
 payload: Dict[str, str] = {
     "messages": [
@@ -238,9 +239,7 @@ payload: Dict[str, str] = {
     ]
 }
 
-w: WorkspaceClient = WorkspaceClient()
-
-url: str = f"https://{workspace_host}/serving-endpoints/agents_nfleming-ace_hardware-ace_hardware_langgraph/invocations"
+url: str = f"https://{workspace_host}/serving-endpoints/agents_nfleming-default-compound_ai_langgraph/invocations"
 headers: Dict[str, str] = {'Authorization': f'Bearer {os.environ.get("DATABRICKS_TOKEN")}', 'Content-Type': 'application/json'}
 response = requests.request(method='POST', headers=headers, url=url, json=payload)
 if response.status_code != 200:
@@ -265,7 +264,7 @@ def ask(message: str) -> str:
     messages.append(ChatMessage(content=message, role=ChatMessageRole.USER))
     print(messages)
     response: QueryEndpointResponse = w.serving_endpoints.query(
-        name="agents_nfleming-ace_hardware-ace_hardware_langgraph",
+        name="agents_nfleming-default-compound_ai_langgraph",
         messages=messages,
         temperature=1.0,
         stream=False,
@@ -283,7 +282,7 @@ messages: List[ChatMessage] = []
 message: str = "How many rows of documentation are there in the genie space?"
 messages.append(ChatMessage(content=message, role=ChatMessageRole.USER))
 response: QueryEndpointResponse = w.serving_endpoints.query(
-    name="agents_nfleming-ace_hardware-ace_hardware_langgraph",
+    name="agents_nfleming-default-compound_ai_langgraph",
     messages=messages,
     temperature=1.0,
     stream=False,

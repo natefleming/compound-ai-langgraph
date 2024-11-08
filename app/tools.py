@@ -10,11 +10,24 @@ from pydantic import BaseModel, Field
 from langchain_core.vectorstores.base import VectorStoreRetriever
 from langchain.tools import Tool, tool
 from langchain_databricks.vectorstores import DatabricksVectorSearch
+from langchain_community.tools.databricks import UCFunctionToolkit
 
 from app.genie_utils import GenieResult, lc_genie_space, GenieClient, GenieToolkit
 
-# import nest_asyncio
-# nest_asyncio.apply()
+
+
+def create_unity_catalog_tools(
+    warehouse_id: str, 
+    functions: List[str]
+) -> List[Tool]:
+    uc_function_toolkit: UCFunctionToolkit = (
+        UCFunctionToolkit(
+            warehouse_id=warehouse_id
+        ).include(
+            *functions
+        )
+    )
+    return uc_function_toolkit.get_tools()
 
 
 def create_vector_search_tool(

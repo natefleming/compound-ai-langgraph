@@ -13,7 +13,8 @@ from app.graph import GraphBuilder
 from app.agents import (
   Agent, 
   create_genie_agent,
-  create_vector_search_agent
+  create_vector_search_agent,
+  create_unity_catalog_agent,
 )
 
 model_config_file: str = "model_config.yaml"
@@ -28,6 +29,13 @@ genie_workspace_host: Optional[str] = databricks_resources.get("genie_workspace_
 llm_endpoint_name: str = databricks_resources.get("llm_endpoint_name")
 
 llm: BaseChatModel = get_llm(llm_endpoint_name)
+
+
+unity_catalog_agent: Agent = create_unity_catalog_agent(
+  llm=llm,
+  warehouse_id=databricks_resources.get("warehouse_id"),
+  functions=[databricks_resources.get("unity_catalog_functions")],
+)
 
 genie_agent: Agent = create_genie_agent(
     llm=llm,
@@ -52,6 +60,7 @@ builder: GraphBuilder = (
   GraphBuilder(llm=llm)
     .add_agent(vector_search_agent)
     .add_agent(genie_agent)
+    .add_agent(unity_catalog_agent)
     #.with_debug()
     #.with_memory()
 )

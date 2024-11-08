@@ -51,6 +51,7 @@ print(f"base_url: {base_url}")
 
 vector_search_endpoint_name: str = "dbdemos_vs_endpoint" 
 vector_search_index: str = "dbdemos.dbdemos_rag_chatbot.databricks_documentation_vs_index"
+unity_catalog_functions: str = "nfleming.default.*"
 model_config_file: str = "model_config.yaml"
 
 # COMMAND ----------
@@ -65,13 +66,16 @@ import yaml
 
 # Provided in .env file. This can be omitted from config and inferred by the GenieClient at runtime
 genie_space_id: str = os.environ["DATABRICKS_GENIE_SPACE_ID"]
+warehouse_id: str = os.environ["DATABRICKS_SQL_WAREHOUSE_ID"]
 
 rag_chain_config: Dict[str, Any] = {
     "databricks_resources": {
         "llm_endpoint_name": "databricks-meta-llama-3-1-70b-instruct",
         "vector_search_endpoint_name": vector_search_endpoint_name,
         "genie_space_id": genie_space_id, # Optional
-        "genie_workspace_host": workspace_host # Optional
+        "genie_workspace_host": workspace_host, # Optional
+        "warehouse_id": warehouse_id,
+        "unity_catalog_functions": unity_catalog_functions,
     },
     "input_example": {
         "messages": [{"content": "Sample user question", "role": "user"}]
@@ -127,8 +131,10 @@ import app.messages
 import app.agents
 import app.prompts
 import app.router
+import app.tools
 import app.genie_utils
 
+reload(app.tools)
 reload(app.llms)
 reload(app.graph)
 reload(app.messages)
@@ -137,7 +143,23 @@ reload(app.prompts)
 reload(app.router)
 reload(app.genie_utils)
 
+# COMMAND ----------
 
+# MAGIC %sql
+# MAGIC CREATE OR REPLACE FUNCTION nfleming.default.python_exec (
+# MAGIC   code STRING COMMENT 'Python code to execute. Remember to print the final result to stdout.'
+# MAGIC )
+# MAGIC RETURNS STRING
+# MAGIC LANGUAGE PYTHON
+# MAGIC COMMENT 'Executes Python code and returns its stdout.'
+# MAGIC AS $$
+# MAGIC   import sys
+# MAGIC   from io import StringIO
+# MAGIC   stdout = StringIO()
+# MAGIC   sys.stdout = stdout
+# MAGIC   exec(code)
+# MAGIC   return stdout.getvalue()
+# MAGIC $$
 
 # COMMAND ----------
 
@@ -156,7 +178,8 @@ from app.graph import GraphBuilder
 from app.agents import (
   Agent, 
   create_genie_agent,
-  create_vector_search_agent
+  create_vector_search_agent,
+  create_unity_catalog_agent,
 )
 
 model_config_file: str = "model_config.yaml"
@@ -171,6 +194,13 @@ genie_workspace_host: Optional[str] = databricks_resources.get("genie_workspace_
 llm_endpoint_name: str = databricks_resources.get("llm_endpoint_name")
 
 llm: BaseChatModel = get_llm(llm_endpoint_name)
+
+
+unity_catalog_agent: Agent = create_unity_catalog_agent(
+  llm=llm,
+  warehouse_id=databricks_resources.get("warehouse_id"),
+  functions=[databricks_resources.get("unity_catalog_functions")],
+)
 
 genie_agent: Agent = create_genie_agent(
     llm=llm,
@@ -195,6 +225,7 @@ builder: GraphBuilder = (
   GraphBuilder(llm=llm)
     .add_agent(vector_search_agent)
     .add_agent(genie_agent)
+    .add_agent(unity_catalog_agent)
     .with_debug()
     #.with_memory()
 )
@@ -243,7 +274,17 @@ final_state = chain.invoke(
 
 # COMMAND ----------
 
-graph.display(verbose=True)
+graph.display(verbose=False)
+
+# COMMAND ----------
+
+from typing import List
+from langchain_core.messages import HumanMessage
+
+messages: List[HumanMessage] = [
+  HumanMessage(content="What is 9 * 49?")
+]
+print(unity_catalog_agent.as_runnable().invoke(messages))
 
 # COMMAND ----------
 
@@ -278,6 +319,23 @@ from langchain_core.messages import HumanMessage
 
 
 message: str = "How can I optimize clusters in Databricks?"
+messages: List[HumanMessage] = [HumanMessage(content=message)]
+config: Dict[str, Any] = {
+    "configurable": {"thread_id": 42}
+}
+
+response: Dict[str, Any] = chain.invoke(messages, config=config)
+response
+
+
+# COMMAND ----------
+
+from typing import List
+
+from langchain_core.messages import HumanMessage
+
+
+message: str = "Use the UC functions to compute 49 * 9?"
 messages: List[HumanMessage] = [HumanMessage(content=message)]
 config: Dict[str, Any] = {
     "configurable": {"thread_id": 42}
