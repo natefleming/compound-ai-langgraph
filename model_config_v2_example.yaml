@@ -1,0 +1,100 @@
+vector_search:
+
+  indexes:
+
+    vector_search_index_databricks: &vector_search_index_databricks
+      index: [catalog].[database].[index]
+
+  endpoints:
+
+    vector_search_endpoint_databricks: &vector_search_endpoint_databricks
+      endpoint_name: [endpoint_name]
+
+  vector_search_databricks: &vector_search_databricks
+    <<: *vector_search_endpoint_databricks
+    <<: *vector_search_index_databricks
+    content: content
+    primary_key: id
+    
+llms:
+
+  llm_llama: &llm_llama
+    llm: databricks-meta-llama-3-1-70b-instruct
+    max_tokens: 1500
+    temperature: 0.01
+
+  llm_dbrx: &llm_dbrx
+    llm: databricks-dbrx-instruct
+    max_tokens: 1500
+    temperature: 0.01
+
+  llm_gte_large: &llm_gte_large
+    llm: databricks-gte-large-en
+
+genie:
+
+  genie_databricks: &genie_databricks
+    genie_space_id: [genie_space_id]
+    genie_workspace_host: [adb-xxx.azuredatabricks.net]
+
+warehouse:
+
+  warehouse_databricks: &warehouse_databricks
+    warehouse_id: d1184b8c2a8a87eb
+    
+tools:
+
+  unity_catalog:
+    functions: 
+    - [catalog].[database].[*]
+    
+prompts:
+
+  router_prompt: &router_prompt
+    prompt: |-
+      You are an intelligent assistant capable of classifying and routing topics.
+      You should interact politely with user to try to figure out how you can help. You can help in a few ways:
+
+      - If the user is asking about Databricks then call the router with `vector_search`
+      - If the user is asking about genie then call the router with `genie`
+      - If the user is asking about unity catalog, warehouse, python or match then call the router with `unity_catalog`
+      - If you are unable to help the user, you can say so.
+
+  vector_search_prompt: &vector_search_prompt
+    prompt: |-
+      Your job is to help a user find information from Databricks Documentation.
+      You only have certain tools you can use.
+      If you are unable to help the user, you can say so.
+
+  genie_prompt: &genie_prompt
+    prompt: |-
+      Your job is to help a user find information from Genie.
+      You have access to `{tool_name}` to answer the question.
+      ALWAYS use the tools provided. 
+      The Genie tool requires specific parameters. Input parameters should be passed in a dictionary.
+      Summarize the question, excluding any reference to genie or genie spaces
+      If you are unable to help the user, you can say so.
+
+  unity_catalog_prompt: &unity_catalog_prompt
+    prompt: |-
+      Your job is to help a user find information from the Databricks Warehouse, Unity Catalog, UC or anything that can be solved with Python
+      You only have certain tools you can use.
+      If you are unable to help the user, you can say so.
+
+agents:
+
+  router:
+    <<: *llm_llama
+    <<: *router_prompt
+
+  vector_search:
+    <<: *llm_dbrx
+    <<: *vector_search_prompt 
+
+  genie:
+    <<: *llm_llama
+    <<: *genie_prompt 
+
+  unity_catalog:
+    <<: *llm_dbrx
+    <<: *unity_catalog_prompt 
