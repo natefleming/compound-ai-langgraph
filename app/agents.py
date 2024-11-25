@@ -44,11 +44,14 @@ class Agent(AgentBase):
 
   def as_runnable(self) -> RunnableSequence:
     def _get_messages(messages: List[BaseMessage]) -> List[BaseMessage]:
+      result_messages: List[BaseMessage]
       if self.prompt is not None:
-        return [SystemMessage(content=self.prompt)] + messages
+        result_messages = [SystemMessage(content=self.prompt)] + messages
       else:
-        return messages
-    
+        result_messages = messages
+
+      return result_messages
+
     chain: RunnableSequence = (
       RunnableLambda(filter_out_routes) | 
       RunnableLambda(_get_messages) | 
@@ -73,7 +76,6 @@ def create_unity_catalog_agent(
     functions: List[str],
     name: Optional[str] = "unity_catalog"
 ) -> Agent:
-    
     unity_catalog_tools: List[Tool] = create_unity_catalog_tools(
         warehouse_id=warehouse_id, 
         functions=functions,
@@ -97,7 +99,6 @@ def create_genie_agent(
     token: Optional[str] = None,
     name: Optional[str] = "genie"
 ) -> Agent:
-    
     genie_tool: Tool = create_genie_tool(
         space_id=space_id, 
         workspace_host=workspace_host,
@@ -123,7 +124,6 @@ def create_vector_search_agent(
   parameters: Dict[str, Any] = None,
   name: Optional[str] = "vector_search",
 ) -> Agent:
-
   vector_search_tool: Tool = (
     create_vector_search_tool(
       endpoint_name=endpoint_name,

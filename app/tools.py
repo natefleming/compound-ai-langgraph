@@ -12,8 +12,7 @@ from langchain.tools import Tool, tool
 from langchain_databricks.vectorstores import DatabricksVectorSearch
 from langchain_community.tools.databricks import UCFunctionToolkit
 
-from app.genie_utils import GenieResult, lc_genie_space, GenieClient, GenieToolkit
-
+from databricks_langchain.genie import Genie
 
 
 def create_unity_catalog_tools(
@@ -65,13 +64,12 @@ def create_genie_tool(
 
     space_id = space_id or os.environ.get("DATABRICKS_GENIE_SPACE_ID")
     
-    genie_client: GenieClient = GenieClient(
-        host=workspace_host,  
-        token=token, 
+    genie_client: Genie = Genie(
+        space_id=space_id,
     )
 
     @tool("genie_tool")
-    def genie_tool(question: str) -> GenieResult:
+    def genie_tool(question: str) -> str:
         """
         This tool lets you have a conversation and chat with tabular data about <topic>. You should ask
         questions about the data and the tool will try to answer them. 
@@ -82,19 +80,11 @@ def create_genie_tool(
             question: The question to ask to ask Genie
 
         Returns:
-            GenieResult: An object containing the Genie response
+            str: An object containing the Genie response
         """
-        import nest_asyncio
-        nest_asyncio.apply()
-        
-        conversation_id: str = (
-            asyncio.run(genie_client.start(
-                space_id, 
-                start_suffix=f"{str(datetime.now())}-{str(uuid.uuid4())}"
-            ))
-        )
-        result: GenieResult = asyncio.run(genie_client.ask(space_id, conversation_id, question))
-        return result
+
+        answer: str = genie_client.ask_question(question)
+        return answer
     
     return genie_tool
 

@@ -1,6 +1,11 @@
 # Databricks notebook source
-# MAGIC %pip install --quiet --upgrade langchain langgraph langchain-openai langchain-databricks langchain-community mlflow databricks-sdk databricks-vectorsearch python-dotenv rich nest-asyncio
+# MAGIC %pip install --quiet --upgrade langchain langgraph langchain-openai databricks-langchain langchain-community mlflow databricks-sdk databricks-vectorsearch python-dotenv rich nest-asyncio
 # MAGIC dbutils.library.restartPython()
+
+# COMMAND ----------
+
+# MAGIC %load_ext autoreload
+# MAGIC %autoreload 2
 
 # COMMAND ----------
 
@@ -12,7 +17,7 @@ pip_requirements: List[str] = [
   f"mlflow=={version('mlflow')}",
   f"langchain=={version('langchain')}",
   f"langchain_openai=={version('langchain_openai')}",
-  f"langchain_databricks=={version('langchain_databricks')}",
+  f"databricks_langchain=={version('databricks_langchain')}",
   f"langchain_community=={version('langchain_community')}",
   f"langgraph=={version('langgraph')}",
   f"databricks_sdk=={version('databricks_sdk')}",
@@ -70,7 +75,7 @@ warehouse_id: str = os.environ["DATABRICKS_SQL_WAREHOUSE_ID"]
 
 rag_chain_config: Dict[str, Any] = {
     "databricks_resources": {
-        "llm_endpoint_name": "databricks-meta-llama-3-1-70b-instruct",
+        "llm_endpoint_name": "databricks-meta-llama-3-1-405b-instruct",
         "vector_search_endpoint_name": vector_search_endpoint_name,
         "genie_space_id": genie_space_id, # Optional
         "genie_workspace_host": workspace_host, # Optional
@@ -123,8 +128,6 @@ speech_to_text_chain: RunnableSequence = RunnableLambda(speech_to_text)
 
 # COMMAND ----------
 
-from importlib import reload
-
 import app.llms
 import app.graph
 import app.messages
@@ -132,16 +135,6 @@ import app.agents
 import app.prompts
 import app.router
 import app.tools
-import app.genie_utils
-
-reload(app.tools)
-reload(app.llms)
-reload(app.graph)
-reload(app.messages)
-reload(app.agents)
-reload(app.prompts)
-reload(app.router)
-reload(app.genie_utils)
 
 # COMMAND ----------
 

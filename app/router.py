@@ -42,8 +42,12 @@ def route(messages: List[BaseMessage]) -> str:
     last_message: AIMessage = get_last_ai_message(messages)
     if last_message is None:
         return "router"
-    # if last_message.name == "vector_search":
-    #     return "vector_search"
+    if last_message.name == "vector_search":
+        return "vector_search"
+    if last_message.name == "genie":
+        return "genie"
+    if last_message.name == "unity_catalog":
+        return "unity_catalog"
     else:
         return "router"
       
