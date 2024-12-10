@@ -63,6 +63,12 @@ CompiledStateGraph.display = _display
 
 class GraphBuilder(object):
     def __init__(self, llm: BaseChatModel) -> None:
+        """
+        Initializes the GraphBuilder with a language model.
+
+        Args:
+            llm (BaseChatModel): The language model to be used.
+        """
         self._llm = llm
         self._graph: StateGraph = MessageGraph()
         self._agents: List[Agent] = []
@@ -71,18 +77,48 @@ class GraphBuilder(object):
         self._entry_point: str = "router"
 
     def add_agent(self, agent) -> "GraphBuilder":
+        """
+        Adds an agent to the graph.
+
+        Args:
+            agent (Agent): The agent to be added.
+
+        Returns:
+            GraphBuilder: The current instance of GraphBuilder.
+        """
         self._agents.append(agent)
         return self
 
     def with_memory(self) -> "GraphBuilder":
+        """
+        Enables memory saving for the graph.
+
+        Returns:
+            GraphBuilder: The current instance of GraphBuilder.
+        """
         self._memory = MemorySaver()
         return self
 
     def with_debug(self) -> "GraphBuilder":
+        """
+        Enables debug mode for the graph.
+
+        Returns:
+            GraphBuilder: The current instance of GraphBuilder.
+        """
         self._debug = True
         return self
 
     def with_entry_point(self, node: Union[str | Agent]) -> "GraphBuilder":
+        """
+        Sets the entry point for the graph.
+
+        Args:
+            node (Union[str, Agent]): The entry point node, either a string or an Agent.
+
+        Returns:
+            GraphBuilder: The current instance of GraphBuilder.
+        """
         if isinstance(node, Agent):
             self._entry_point = node.name
         else:
@@ -90,6 +126,12 @@ class GraphBuilder(object):
         return self
 
     def build(self) -> StateGraph:
+        """
+        Builds the state graph with the added agents and configurations.
+
+        Returns:
+            StateGraph: The constructed state graph.
+        """
         self.add_agent(self.router_agent())
 
         nodes: Dict[str, str] = {
@@ -103,12 +145,12 @@ class GraphBuilder(object):
             guard: Optional[Guard] = agent.post_guard
             if agent.post_guard is not None:
                 self._graph.add_node(
-                    agent.post_guard.name, 
-                    partial(apply_guard, guard=agent.post_guard)
+                    agent.post_guard.name,
+                    partial(apply_guard, guard=agent.post_guard),
                 )
                 self._graph.add_edge(agent.name, agent.post_guard.name)
                 self._graph.add_conditional_edges(agent.post_guard.name, route, nodes)
-                
+
         for agent in self.agents:
             self._graph.add_conditional_edges(agent.name, route, nodes)
 
@@ -124,6 +166,12 @@ class GraphBuilder(object):
         return compiled_state_graph
 
     def router_agent(self) -> Agent:
+        """
+        Creates a router agent for the graph.
+
+        Returns:
+            Agent: The created router agent.
+        """
         prompt: str = router_prompt()
         router_tool: Tool = create_router_tool(choices=self.agents)
 
@@ -135,10 +183,22 @@ class GraphBuilder(object):
 
     @property
     def agents(self) -> List[Agent]:
+        """
+        Returns the list of agents added to the graph.
+
+        Returns:
+            List[Agent]: The list of agents.
+        """
         return self._agents
 
     @property
     def tools(self) -> List[Tool]:
+        """
+        Returns the list of tools associated with the agents.
+
+        Returns:
+            List[Tool]: The list of tools.
+        """
         agent_tools: List[Tool] = []
         for agent in self._agents:
             agent_tools.extend(agent.tools)

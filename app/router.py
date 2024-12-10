@@ -1,12 +1,16 @@
-
 from typing import List
-
 from langchain_core.messages import AIMessage, BaseMessage
-
 from langgraph.graph import END
 
-
 def filter_out_routes(messages: List[BaseMessage]) -> List[BaseMessage]:
+    """Filters out messages that are tool calls to the router.
+
+    Args:
+        messages (List[BaseMessage]): List of messages to filter.
+
+    Returns:
+        List[BaseMessage]: Filtered list of messages.
+    """
     filtered_messages: List[BaseMessage] = []
     for m in messages:
         if is_tool_call(m):
@@ -14,20 +18,41 @@ def filter_out_routes(messages: List[BaseMessage]) -> List[BaseMessage]:
                 continue
         filtered_messages.append(m)
     return filtered_messages
-  
-  
+
 def get_last_ai_message(messages: List[BaseMessage]) -> AIMessage:
+    """Gets the last AIMessage from a list of messages.
+
+    Args:
+        messages (List[BaseMessage]): List of messages to search.
+
+    Returns:
+        AIMessage: The last AIMessage found, or None if not found.
+    """
     for m in messages[::-1]:
         if isinstance(m, AIMessage):
             return m
     return None
 
-
 def is_tool_call(message: BaseMessage) -> bool:
+    """Checks if a message is a tool call.
+
+    Args:
+        message (BaseMessage): The message to check.
+
+    Returns:
+        bool: True if the message is a tool call, False otherwise.
+    """
     return hasattr(message, "additional_kwargs") and "tool_calls" in message.additional_kwargs
 
-
 def route(messages: List[BaseMessage]) -> str:
+    """Determines the route based on the last message in the list.
+
+    Args:
+        messages (List[BaseMessage]): List of messages to route.
+
+    Returns:
+        str: The determined route.
+    """
     last_message: BaseMessage = messages[-1]
     if isinstance(last_message, AIMessage):
         if not last_message.tool_calls:
@@ -50,6 +75,3 @@ def route(messages: List[BaseMessage]) -> str:
         return "unity_catalog"
     else:
         return "router"
-      
-
-      

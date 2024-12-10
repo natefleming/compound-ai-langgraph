@@ -1,24 +1,27 @@
-
 from typing import List, Dict, Any, Optional
-
 from datetime import datetime
 import uuid
 import asyncio
-
 from pydantic import BaseModel, Field
-
 from langchain_core.vectorstores.base import VectorStoreRetriever
 from langchain.tools import Tool, tool
 from langchain_databricks.vectorstores import DatabricksVectorSearch
 from langchain_community.tools.databricks import UCFunctionToolkit
-
 from databricks_langchain.genie import Genie
-
 
 def create_unity_catalog_tools(
     warehouse_id: str, 
     functions: List[str]
 ) -> List[Tool]:
+    """Creates a list of Unity Catalog tools.
+
+    Args:
+        warehouse_id (str): The ID of the warehouse.
+        functions (List[str]): A list of function names to include.
+
+    Returns:
+        List[Tool]: A list of tools created from the Unity Catalog functions.
+    """
     uc_function_toolkit: UCFunctionToolkit = (
         UCFunctionToolkit(
             warehouse_id=warehouse_id
@@ -28,17 +31,29 @@ def create_unity_catalog_tools(
     )
     return uc_function_toolkit.get_tools()
 
-
 def create_vector_search_tool(
-  endpoint_name: str,
-  index_name: str,
-  name: str = "vector_search_tool",
-  description: str = "This tool is used to conduct similarity search using Databricks Vector Search",
-  text_column: Optional[str] = None,
-  columns: Optional[List[str]] = None,
-  parameters: Optional[Dict[str, Any]] = None,
+    endpoint_name: str,
+    index_name: str,
+    name: str = "vector_search_tool",
+    description: str = "This tool is used to conduct similarity search using Databricks Vector Search",
+    text_column: Optional[str] = None,
+    columns: Optional[List[str]] = None,
+    parameters: Optional[Dict[str, Any]] = None,
 ) -> Tool:
-    
+    """Creates a vector search tool.
+
+    Args:
+        endpoint_name (str): The name of the endpoint.
+        index_name (str): The name of the index.
+        name (str, optional): The name of the tool. Defaults to "vector_search_tool".
+        description (str, optional): The description of the tool. Defaults to "This tool is used to conduct similarity search using Databricks Vector Search".
+        text_column (Optional[str], optional): The text column to use. Defaults to None.
+        columns (Optional[List[str]], optional): The columns to use. Defaults to None.
+        parameters (Optional[Dict[str, Any]], optional): Additional parameters. Defaults to None.
+
+    Returns:
+        Tool: The created vector search tool.
+    """
     vector_search: DatabricksVectorSearch = DatabricksVectorSearch(
         index_name=index_name,
         endpoint=endpoint_name,
@@ -52,18 +67,24 @@ def create_vector_search_tool(
         name=name, 
         description=description
     )
-
     return vector_search_tool
-
 
 def create_genie_tool(
     space_id: Optional[str] = None,
     workspace_host: Optional[str] = None,
     token: Optional[str] = None
 ) -> Tool:
+    """Creates a Genie tool.
 
+    Args:
+        space_id (Optional[str], optional): The space ID. Defaults to None.
+        workspace_host (Optional[str], optional): The workspace host. Defaults to None.
+        token (Optional[str], optional): The token. Defaults to None.
+
+    Returns:
+        Tool: The created Genie tool.
+    """
     space_id = space_id or os.environ.get("DATABRICKS_GENIE_SPACE_ID")
-    
     genie_client: Genie = Genie(
         space_id=space_id,
     )
@@ -82,23 +103,26 @@ def create_genie_tool(
         Returns:
             str: An object containing the Genie response
         """
-
         answer: str = genie_client.ask_question(question)
         return answer
     
     return genie_tool
 
-
 def create_router_tool(choices: List['Agent']) -> Tool:
+    """Creates a router tool.
 
+    Args:
+        choices (List['Agent']): A list of agent choices.
+
+    Returns:
+        Tool: The created router tool.
+    """
     agent_names: List[str] = [a.name for a in choices]
     
     class Router(BaseModel):
         """
         Call this if you are able to route the user to the appropriate representative.
         """
-
         choice: str = Field(description=f"should be one of: {','.join(agent_names)}")
 
     return Router
-  

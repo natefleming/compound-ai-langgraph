@@ -1,6 +1,7 @@
 # Databricks notebook source
-# MAGIC %pip install --quiet --upgrade langchain langgraph langchain-openai databricks-langchain langchain-community mlflow databricks-sdk databricks-vectorsearch python-dotenv guardrails-ai presidio-analyzer nltk
-# MAGIC dbutils.library.restartPython()
+# MAGIC %pip install --upgrade langchain mlflow 
+# MAGIC %pip install langgraph langchain-openai databricks-langchain langchain-community databricks-vectorsearch databricks-sdk python-dotenv guardrails-ai presidio-analyzer nltk
+# MAGIC %restart_python
 
 # COMMAND ----------
 
@@ -51,55 +52,7 @@ print(f"base_url: {base_url}")
 
 # COMMAND ----------
 
-vector_search_endpoint_name: str = "dbdemos_vs_endpoint" 
-vector_search_index: str = "dbdemos.dbdemos_rag_chatbot.databricks_documentation_vs_index"
-unity_catalog_functions: str = "nfleming.default.*"
 model_config_file: str = "model_config.yaml"
-
-# COMMAND ----------
-
-from typing import Any, Dict
-import os
-
-import mlflow
-from mlflow.models import ModelConfig
-
-import yaml
-
-# Provided in .env file. This can be omitted from config and inferred by the GenieClient at runtime
-genie_space_id: str = os.environ["DATABRICKS_GENIE_SPACE_ID"]
-warehouse_id: str = os.environ["DATABRICKS_SQL_WAREHOUSE_ID"]
-
-rag_chain_config: Dict[str, Any] = {
-    "databricks_resources": {
-        "llm_endpoint_name": "databricks-meta-llama-3-1-70b-instruct",
-        "vector_search_endpoint_name": vector_search_endpoint_name,
-        "genie_space_id": genie_space_id, # Optional
-        "genie_workspace_host": workspace_host, # Optional
-        "warehouse_id": warehouse_id,
-        "unity_catalog_functions": unity_catalog_functions,
-    },
-    "input_example": {
-        "messages": [{"content": "Sample user question", "role": "user"}]
-    },
-    "llm_config": {
-        "llm_parameters": {"max_tokens": 1500, "temperature": 0.01},
-    },
-    "retriever_config": {
-        "chunk_template": "Passage: {chunk_text}\n",
-        "data_pipeline_tag": "poc",
-        "parameters": {"k": 5, "query_type": "ann"},
-        "schema": {"chunk_text": "content", "document_uri": "url", "primary_key": "id"},
-        "vector_search_index": vector_search_index,
-    },
-}
-try:
-    with open(model_config_file, 'w') as f:
-        yaml.dump(rag_chain_config, f)
-except:
-    ...
-
-
 
 # COMMAND ----------
 
@@ -113,24 +66,6 @@ import app.tools
 import app.guardrails.validators
 import app.guardrails.guards
 
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC CREATE OR REPLACE FUNCTION nfleming.default.python_exec (
-# MAGIC   code STRING COMMENT 'Python code to execute. Remember to print the final result to stdout.'
-# MAGIC )
-# MAGIC RETURNS STRING
-# MAGIC LANGUAGE PYTHON
-# MAGIC COMMENT 'Executes Python code and returns its stdout.'
-# MAGIC AS $$
-# MAGIC   import sys
-# MAGIC   from io import StringIO
-# MAGIC   stdout = StringIO()
-# MAGIC   sys.stdout = stdout
-# MAGIC   exec(code)
-# MAGIC   return stdout.getvalue()
-# MAGIC $$
 
 # COMMAND ----------
 
@@ -220,7 +155,7 @@ from langchain_core.messages import HumanMessage
 
 mlflow.langchain.autolog(disable=False)
 
-message: str = "How can I contact Databricks by phone number?"
+message: str = "How can I optimize a Databricks Cluster?"
 messages: List[HumanMessage] = [HumanMessage(content=message)]
 config: Dict[str, Any] = {
     "configurable": {"thread_id": 42}
