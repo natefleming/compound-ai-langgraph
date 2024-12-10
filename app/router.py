@@ -28,7 +28,7 @@ def is_tool_call(message: BaseMessage) -> bool:
 
 
 def route(messages: List[BaseMessage]) -> str:
-    last_message = messages[-1]
+    last_message: BaseMessage = messages[-1]
     if isinstance(last_message, AIMessage):
         if not last_message.tool_calls:
             return END

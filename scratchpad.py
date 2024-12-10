@@ -1,5 +1,5 @@
 # Databricks notebook source
-# MAGIC %pip install --quiet --upgrade langchain langgraph langchain-openai databricks-langchain langchain-community mlflow databricks-sdk databricks-vectorsearch python-dotenv rich nest-asyncio
+# MAGIC %pip install --quiet --upgrade langchain langgraph langchain-openai databricks-langchain langchain-community mlflow databricks-sdk databricks-vectorsearch python-dotenv guardrails-ai presidio-analyzer nltk
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -22,18 +22,15 @@ pip_requirements: List[str] = [
   f"langgraph=={version('langgraph')}",
   f"databricks_sdk=={version('databricks_sdk')}",
   f"databricks_vectorsearch=={version('databricks_vectorsearch')}",
-  f"nest-asyncio=={version('nest-asyncio')}",
+  f"guardrails-ai=={version('guardrails-ai')}",
+  f"nltk=={version('nltk')}",
+  f"presidio-analyzer=={version('presidio-analyzer')}",
 ]
 print("\n".join(pip_requirements))
 
 # COMMAND ----------
 
-import sys
-
-from importlib import reload
-from rich import print
 from dotenv import load_dotenv, find_dotenv
-
 
 _ = load_dotenv(find_dotenv())
 
@@ -75,7 +72,7 @@ warehouse_id: str = os.environ["DATABRICKS_SQL_WAREHOUSE_ID"]
 
 rag_chain_config: Dict[str, Any] = {
     "databricks_resources": {
-        "llm_endpoint_name": "databricks-meta-llama-3-1-405b-instruct",
+        "llm_endpoint_name": "databricks-meta-llama-3-1-70b-instruct",
         "vector_search_endpoint_name": vector_search_endpoint_name,
         "genie_space_id": genie_space_id, # Optional
         "genie_workspace_host": workspace_host, # Optional
@@ -106,28 +103,6 @@ except:
 
 # COMMAND ----------
 
-from langchain_core.runnables import RunnableLambda, RunnableSequence
-from langchain_core.messages import HumanMessage
-
-
-def text_to_speech(message: HumanMessage) -> str:
-  return HumanMessage(content=message.content)
-
-text_to_speech_chain: RunnableSequence = RunnableLambda(text_to_speech)
-
-# COMMAND ----------
-
-from langchain_core.runnables import RunnableLambda, RunnableSequence
-from langchain_core.messages import HumanMessage
-
-
-def speech_to_text(message: HumanMessage) -> str:
-  return HumanMessage(content=message.content)
-
-speech_to_text_chain: RunnableSequence = RunnableLambda(speech_to_text)
-
-# COMMAND ----------
-
 import app.llms
 import app.graph
 import app.messages
@@ -135,6 +110,9 @@ import app.agents
 import app.prompts
 import app.router
 import app.tools
+import app.guardrails.validators
+import app.guardrails.guards
+
 
 # COMMAND ----------
 
@@ -214,6 +192,11 @@ vector_search_agent: Agent = create_vector_search_agent(
   parameters = retriever_config.get("parameters"),
 )
 
+from app.guardrails.guards import topic_guard, pii_guard
+#vector_search_agent.post_guard = topic_guard(banned_topics=("optimize"))
+
+vector_search_agent.post_guard = pii_guard()
+
 builder: GraphBuilder = (
   GraphBuilder(llm=llm)
     .add_agent(vector_search_agent)
@@ -228,6 +211,24 @@ graph: StateGraph = builder.build()
 chain: RunnableSequence = graph.as_chain()
 
 mlflow.models.set_model(chain)
+
+# COMMAND ----------
+
+from typing import List
+
+from langchain_core.messages import HumanMessage
+
+mlflow.langchain.autolog(disable=False)
+
+message: str = "How can I contact Databricks by phone number?"
+messages: List[HumanMessage] = [HumanMessage(content=message)]
+config: Dict[str, Any] = {
+    "configurable": {"thread_id": 42}
+}
+
+response: Dict[str, Any] = chain.invoke(messages, config=config)
+response
+
 
 # COMMAND ----------
 
@@ -303,23 +304,6 @@ print(genie_agent.as_runnable().invoke(messages))
 genie_tool = genie_agent.tools[0]
 print(type(genie_tool))
 genie_tool.run("How many rows of documentation are there in the genie space?")
-
-# COMMAND ----------
-
-from typing import List
-
-from langchain_core.messages import HumanMessage
-
-
-message: str = "How can I optimize clusters in Databricks?"
-messages: List[HumanMessage] = [HumanMessage(content=message)]
-config: Dict[str, Any] = {
-    "configurable": {"thread_id": 42}
-}
-
-response: Dict[str, Any] = chain.invoke(messages, config=config)
-response
-
 
 # COMMAND ----------
 

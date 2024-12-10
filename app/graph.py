@@ -17,11 +17,13 @@ from mlflow.langchain.output_parsers import (
     ChatCompletionsOutputParser,
 )
 
+from guardrails.guard import Guard
+
 from app.router import route
 from app.agents import Agent, create_agent
 from app.prompts import router_prompt
 from app.tools import create_router_tool
-from app.messages import latest_message_content, first_message
+from app.messages import latest_message_content, first_message, apply_guard
 
 
 def _display(self, verbose: bool = False) -> None:
@@ -98,7 +100,15 @@ class GraphBuilder(object):
         for agent in self._agents:
             self._graph.add_node(agent.name, agent.as_runnable())
             nodes[agent.name] = agent.name
-
+            guard: Optional[Guard] = agent.post_guard
+            if agent.post_guard is not None:
+                self._graph.add_node(
+                    agent.post_guard.name, 
+                    partial(apply_guard, guard=agent.post_guard)
+                )
+                self._graph.add_edge(agent.name, agent.post_guard.name)
+                self._graph.add_conditional_edges(agent.post_guard.name, route, nodes)
+                
         for agent in self.agents:
             self._graph.add_conditional_edges(agent.name, route, nodes)
 

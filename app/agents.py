@@ -8,6 +8,8 @@ from langchain.tools import Tool
 from langchain_core.runnables import RunnableSequence, RunnableLambda
 from langchain_core.messages import SystemMessage, BaseMessage
 
+from guardrails.guard import Guard
+
 from app.router import filter_out_routes
 from app.messages import add_name
 from app.tools import create_genie_tool, create_vector_search_tool, create_unity_catalog_tools
@@ -35,12 +37,16 @@ class Agent(AgentBase):
     name: str, 
     llm: BaseChatModel, 
     prompt: Optional[str] = None, 
-    tools: List[Tool] = []
+    tools: List[Tool] = [],
+    post_guard: Optional[Guard] = None
   ) -> None:
     self.name = name
     self.llm = llm
     self.prompt = prompt
     self.tools = tools
+    self.post_guard = post_guard
+    if self.post_guard is not None:
+      self.post_guard.name = f"{name}-{post_guard.name}"
 
   def as_runnable(self) -> RunnableSequence:
     def _get_messages(messages: List[BaseMessage]) -> List[BaseMessage]:
@@ -56,7 +62,7 @@ class Agent(AgentBase):
       RunnableLambda(filter_out_routes) | 
       RunnableLambda(_get_messages) | 
       self.llm.bind_tools(self.tools) | 
-      partial(add_name, name=self.name)
+      partial(add_name, name=self.name) 
     )
     
     return chain
@@ -65,9 +71,10 @@ def create_agent(
     name: str, 
     llm: BaseChatModel, 
     prompt: Optional[str] = None, 
-    tools: List[Tool] = []
+    tools: List[Tool] = [],
+    post_guard: Optional[Guard] = None
 ) -> Agent:
-  return Agent(name=name, llm=llm, prompt=prompt, tools=tools)
+  return Agent(name=name, llm=llm, prompt=prompt, tools=tools, post_guard=post_guard)
 
 
 def create_unity_catalog_agent(
