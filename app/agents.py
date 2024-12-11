@@ -11,8 +11,19 @@ from guardrails.guard import Guard
 
 from app.router import filter_out_routes
 from app.messages import add_name
-from app.tools import create_genie_tool, create_vector_search_tool, create_unity_catalog_tools, create_router_tool
-from app.prompts import genie_prompt, vector_search_prompt, unity_catalog_prompt, router_prompt
+from app.tools import (
+    create_genie_tool, 
+    create_vector_search_tool, 
+    create_unity_catalog_tools, 
+    create_router_tool
+)
+
+from app.prompts import (
+    genie_prompt, 
+    vector_search_prompt, 
+    unity_catalog_prompt, 
+    router_prompt
+)
 
 
 class AgentBase(ABC):
@@ -125,7 +136,14 @@ def create_agent(
     Returns:
         Agent: The created agent.
     """
-    return Agent(name=name, llm=llm, prompt=prompt, tools=tools, post_guard=post_guard)
+    return Agent(
+        name=name, 
+        description=description, 
+        llm=llm, 
+        prompt=prompt, 
+        tools=tools,
+        post_guard=post_guard
+    )
 
 
 def create_router_agent(
@@ -135,7 +153,7 @@ def create_router_agent(
     description: str = "Responsible for classifying and routing user prompts"
 ) -> Agent:
 
-    prompt: str = router_prompt()
+    prompt: str = router_prompt(agents=agents)
     router_tool: Tool = create_router_tool(choices=agents)
 
     router_agent: Agent = create_agent(
@@ -226,7 +244,7 @@ def create_vector_search_agent(
     columns: List[str] = None,
     parameters: Dict[str, Any] = None,
     name: Optional[str] = "vector_search",
-    description: Optional[str] = "Answer questions using Databricks Vector Search tools."
+    description: Optional[str] = "Answer questions about Databricks"
 ) -> Agent:
     """Creates a Vector Search agent.
 
@@ -237,7 +255,7 @@ def create_vector_search_agent(
         columns (List[str], optional): The list of columns. Defaults to None.
         parameters (Dict[str, Any], optional): The parameters. Defaults to None.
         name (Optional[str], optional): The name of the agent. Defaults to "vector_search".
-        description (Optional[str], optional): The description of the agent. Defaults to "Answer questions using Databricks Vector Search tools.".
+        description (Optional[str], optional): The description of the agent. Defaults to "Answer questions about Databricks".
     Returns:
         Agent: The created Vector Search agent.
     """

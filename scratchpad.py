@@ -66,7 +66,6 @@ import app.tools
 import app.guardrails.validators
 import app.guardrails.guards
 
-
 # COMMAND ----------
 
 from typing import Any, Dict, Optional
@@ -127,11 +126,6 @@ vector_search_agent: Agent = create_vector_search_agent(
   parameters = retriever_config.get("parameters"),
 )
 
-from app.guardrails.guards import topic_guard, pii_guard
-#vector_search_agent.post_guard = topic_guard(banned_topics=("optimize"))
-
-vector_search_agent.post_guard = pii_guard()
-
 builder: GraphBuilder = (
   GraphBuilder(llm=llm)
     .add_agent(vector_search_agent)
@@ -182,7 +176,7 @@ input_example = {
         "messages": [
             {
                 "role": "user",
-                "content": "How many rows of documentation are there in the genie space?",
+                "content": message,
             }
         ]
     }

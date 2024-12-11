@@ -6,8 +6,8 @@ langchain_community==0.3.11
 langgraph==0.2.58
 databricks_sdk==0.38.0
 databricks_vectorsearch==0.40
-#guardrails-ai==0.6.0
+guardrails-ai==0.6.0
 nltk==3.8.1
-#presidio-analyzer==2.2.355
+presidio-analyzer==2.2.355
 python-dotenv
 

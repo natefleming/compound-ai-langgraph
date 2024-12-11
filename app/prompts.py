@@ -24,10 +24,11 @@ def vector_search_prompt(tool_name: str) -> str:
     Returns:
         str: The generated prompt.
     """
-    prompt: str = dedent("""
+    prompt: str = dedent(f"""
         Your job is to help a user find information from Databricks Documentation.
         You have access to `{tool_name}` to answer the question.
-        ALWAYS use the tools provided.
+        You MUST ALWAYS use the tools provided. 
+        NEVER add additional information which did not come from tools.
         If you are unable to help the user, you can say so.
     """).strip()
     return prompt

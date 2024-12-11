@@ -1,6 +1,7 @@
 from typing import List
 from langchain_core.messages import AIMessage, BaseMessage
 from langgraph.graph import END
+from app.agents import Agent
 
 def filter_out_routes(messages: List[BaseMessage]) -> List[BaseMessage]:
     """Filters out messages that are tool calls to the router.
@@ -44,7 +45,7 @@ def is_tool_call(message: BaseMessage) -> bool:
     """
     return hasattr(message, "additional_kwargs") and "tool_calls" in message.additional_kwargs
 
-def route(messages: List[BaseMessage]) -> str:
+def route(messages: List[BaseMessage], agent_names: List[str]) -> str:
     """Determines the route based on the last message in the list.
 
     Args:
@@ -67,11 +68,13 @@ def route(messages: List[BaseMessage]) -> str:
     last_message: AIMessage = get_last_ai_message(messages)
     if last_message is None:
         return "router"
-    if last_message.name == "vector_search":
-        return "vector_search"
-    if last_message.name == "genie":
-        return "genie"
-    if last_message.name == "unity_catalog":
-        return "unity_catalog"
-    else:
-        return "router"
+    if last_message.name in agent_names:
+        return last_message.name
+    # if last_message.name == "vector_search":
+    #     return "vector_search"
+    # if last_message.name == "genie":
+    #     return "genie"
+    # if last_message.name == "unity_catalog":
+    #     return "unity_catalog"
+    
+    return "router"
