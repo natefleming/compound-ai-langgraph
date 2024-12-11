@@ -1,13 +1,15 @@
 from typing import List, Dict, Any, Optional
-from datetime import datetime
-import uuid
-import asyncio
+
 from pydantic import BaseModel, Field
+
 from langchain_core.vectorstores.base import VectorStoreRetriever
 from langchain.tools import Tool, tool
 from langchain_databricks.vectorstores import DatabricksVectorSearch
 from langchain_community.tools.databricks import UCFunctionToolkit
+
 from databricks_langchain.genie import Genie
+
+import mlflow.models
 
 def create_unity_catalog_tools(
     warehouse_id: str, 
@@ -36,7 +38,9 @@ def create_vector_search_tool(
     index_name: str,
     name: str = "vector_search_tool",
     description: str = "This tool is used to conduct similarity search using Databricks Vector Search",
+    primary_key: Optional[str] = None,
     text_column: Optional[str] = None,
+    doc_uri: Optional[str] = None,
     columns: Optional[List[str]] = None,
     parameters: Optional[Dict[str, Any]] = None,
 ) -> Tool:
@@ -67,6 +71,14 @@ def create_vector_search_tool(
         name=name, 
         description=description
     )
+    
+    mlflow.models.set_retriever_schema(
+        name=index_name,
+        primary_key=primary_key,
+        text_column=text_column,
+        doc_uri=doc_uri,
+    )
+
     return vector_search_tool
 
 def create_genie_tool(

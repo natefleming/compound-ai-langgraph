@@ -237,12 +237,16 @@ def create_genie_agent(
     return genie_agent
 
 
+
 def create_vector_search_agent(
     llm: BaseChatModel,
     endpoint_name: str,
     index_name: str,
-    columns: List[str] = None,
-    parameters: Dict[str, Any] = None,
+    primary_key: str,
+    text_column: str,
+    doc_uri: str,
+    columns: Optional[List[str]] = None,
+    parameters: Optional[Dict[str, Any]] = None,
     name: Optional[str] = "vector_search",
     description: Optional[str] = "Answer questions about Databricks"
 ) -> Agent:
@@ -252,6 +256,9 @@ def create_vector_search_agent(
         llm (BaseChatModel): The language model to be used by the agent.
         endpoint_name (str): The endpoint name.
         index_name (str): The index name.
+        primary_key (str): The primary key.
+        text_column (str): The text column.
+        doc_uri (str): The doc_uri.
         columns (List[str], optional): The list of columns. Defaults to None.
         parameters (Dict[str, Any], optional): The parameters. Defaults to None.
         name (Optional[str], optional): The name of the agent. Defaults to "vector_search".
@@ -262,6 +269,9 @@ def create_vector_search_agent(
     vector_search_tool: Tool = create_vector_search_tool(
         endpoint_name=endpoint_name,
         index_name=index_name,
+        primary_key=primary_key,
+        text_column=text_column,
+        doc_uri=doc_uri,
         columns=columns,
         parameters=parameters,
     )

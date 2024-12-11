@@ -1,10 +1,11 @@
 # Databricks notebook source
-# MAGIC %pip install --quiet --upgrade langchain langgraph langchain-openai langchain-databricks langchain-community mlflow databricks-sdk databricks-vectorsearch databricks-agents python-dotenv nest-asyncio rich
+# MAGIC %pip install --quiet --upgrade langchain langgraph langchain-openai databricks-langchain langchain-community mlflow databricks-sdk databricks-vectorsearch databricks-agents python-dotenv guardrails-ai presidio-analyzer nltk
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
 
-from rich import print
+# MAGIC %load_ext autoreload
+# MAGIC %autoreload 2
 
 # COMMAND ----------
 
@@ -16,12 +17,14 @@ pip_requirements: List[str] = [
   f"mlflow=={version('mlflow')}",
   f"langchain=={version('langchain')}",
   f"langchain_openai=={version('langchain_openai')}",
-  f"langchain_databricks=={version('langchain_databricks')}",
+  f"databricks_langchain=={version('databricks_langchain')}",
   f"langchain_community=={version('langchain_community')}",
   f"langgraph=={version('langgraph')}",
   f"databricks_sdk=={version('databricks_sdk')}",
   f"databricks_vectorsearch=={version('databricks_vectorsearch')}",
-  f"nest-asyncio=={version('nest-asyncio')}",
+  f"guardrails-ai=={version('guardrails-ai')}",
+  f"nltk=={version('nltk')}",
+  f"presidio-analyzer=={version('presidio-analyzer')}",
 ]
 pip_requirements = [f"\"{p}\"," for p in pip_requirements]
 print("\n".join(pip_requirements))
@@ -49,32 +52,38 @@ print(f"base_url: {base_url}")
 
 # COMMAND ----------
 
-from importlib import reload
-
-import app.tools
+import app.llms
 import app.graph
 import app.messages
 import app.agents
 import app.prompts
 import app.router
-import app.genie_utils
-
-reload(app.tools)
-reload(app.llms)
-reload(app.graph)
-reload(app.messages)
-reload(app.agents)
-reload(app.prompts)
-reload(app.router)
-reload(app.genie_utils)
-
+import app.tools
+import app.catalog
+import app.guardrails.validators
+import app.guardrails.guards
 
 # COMMAND ----------
 
+from typing import Any, Dict
+from mlflow.models import ModelConfig
+
+model_config_file: str = "model_config.yaml"
+model_config: ModelConfig = ModelConfig(development_config=model_config_file)
+
+databricks_resources: Dict[str, Any] = model_config.get("databricks_resources")
+registered_model_name: str = databricks_resources.get("registered_model_name")
+evaluation_table_name: str = databricks_resources.get("evaluation_table_name")
+
+print(f"{registered_model_name=}") 
+print(f"{evaluation_table_name=}")
+
+# COMMAND ----------
+
+from typing import Union
 from pathlib import Path
 
 import mlflow
-
 from mlflow.tracking import MlflowClient
 from mlflow.models.model import ModelInfo
 from mlflow.models.signature import ModelSignature, ParamSchema
@@ -83,11 +92,13 @@ from mlflow.models.rag_signatures import (
     ChatCompletionRequest,
     ChatCompletionResponse,
 )
+from mlflow.models.evaluation import EvaluationResult
+
+import pandas as pd
+
 
 mlflow.set_registry_uri("databricks-uc")
-
-registered_model_name: str = "nfleming.default.compound_ai_langgraph"
-
+ 
 signature: ModelSignature = ModelSignature(
     inputs=ChatCompletionRequest(),
     outputs=ChatCompletionResponse(),
@@ -98,53 +109,68 @@ signature: ModelSignature = ModelSignature(
     # ])
 )
 
-with mlflow.start_run(run_name="chain"):
- 
-    mlflow.set_tag("type", "chain")
-    model_info: ModelInfo = mlflow.langchain.log_model(
-        lc_model="chain_as_code.py",
-        registered_model_name=registered_model_name,
-        code_paths=["app"],
-        model_config="model_config.yaml",
-        artifact_path="chain",
-        signature=signature,
-        example_no_conversion=True,
-        pip_requirements=[
-            "mlflow==2.17.1",
-            "langchain==0.3.5",
-            "langchain_openai==0.2.4",
-            "langchain_databricks==0.1.1",
-            "langchain_community==0.3.3",
-            "langgraph==0.2.39",
-            "databricks_sdk==0.36.0",
-            "databricks_vectorsearch==0.40",
-            "nest-asyncio==1.6.0",
-        ],
-    )
-    print(model_info.registered_model_version)
+evalution_pdf: pd.DataFrame = spark.table(evaluation_table_name).toPandas()
+
+def log_and_evaluate_agent(run_name: str, model_config: Union[ModelConfig, Dict[str, Any]]):
+
+    if isinstance(model_config, ModelConfig):
+        model_config = model_config.to_dict()
+
+    with mlflow.start_run(run_name=run_name):
+        mlflow.set_tag("type", "chain")
+        model_info: ModelInfo = mlflow.langchain.log_model(
+            lc_model="chain_as_code.py",
+            registered_model_name=registered_model_name,
+            code_paths=["app"],
+            model_config=model_config,
+            artifact_path="chain",
+            signature=signature,
+            example_no_conversion=True,
+            pip_requirements=[
+                "mlflow==2.19.0",
+                "langchain==0.3.11",
+                "langchain_openai==0.2.12",
+                "databricks_langchain==0.0.3",
+                "langchain_community==0.3.11",
+                "langgraph==0.2.58",
+                "databricks_sdk==0.39.0",
+                "databricks_vectorsearch==0.40",
+                "guardrails-ai==0.6.1",
+                "nltk==3.9.1",
+                "presidio-analyzer==2.2.355",
+            ],
+        )
+        print(model_info.registered_model_version)
+
+        eval_results: EvaluationResult = mlflow.evaluate(
+            data=evalution_pdf,             # Your evaluation set
+            model=model_info.model_uri,     # Logged agent from above
+            model_type="databricks-agent",  # activate Mosaic AI Agent Evaluation
+        )
+        return (model_info, eval_results)
 
 
 # COMMAND ----------
 
-def get_latest_model_version(model_name: str) -> int:
-    from mlflow.tracking import MlflowClient
-    mlflow_client: MlflowClient = MlflowClient(registry_uri="databricks-uc")
-    latest_version = 1
-    for mv in mlflow_client.search_model_versions(f"name='{model_name}'"):
-        version_int = int(mv.version)
-        if version_int > latest_version:
-            latest_version = version_int
-    return latest_version
+from mlflow.models.model import ModelInfo
+from mlflow.models.evaluation import EvaluationResult
 
-latest_model_version: int = get_latest_model_version(registered_model_name)
+model_info: mlflow.models.model.ModelInfo
+evaluation_result: EvaluationResult
 
-print(f"{latest_model_version=}")
+model_info, evaluation_result = (
+  log_and_evaluate_agent(run_name="chain", model_config=model_config)
+)
+
 
 # COMMAND ----------
 
 from mlflow.tracking import MlflowClient
 
+from app.utils import get_latest_model_version
+
 client: MlflowClient = MlflowClient(registry_uri="databricks-uc")
+latest_model_version: int = get_latest_model_version(registered_model_name)
 
 client.set_registered_model_alias(
   name=registered_model_name, 
@@ -169,7 +195,7 @@ payload: Dict[str, str] = {
     "messages": [
         {
             "role": "user",
-            "content": "How many rows of documentation are there in the genie space?",
+            "content": "How can I add a fundraiser key?",
             #"content": "How can we optimize clusters in Databricks?",
         }
     ]

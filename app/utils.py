@@ -1,4 +1,6 @@
 from databricks.vector_search.client import VectorSearchClient
+import time
+
 
 def get_latest_model_version(model_name: str) -> int:
     """Get the latest version of a model from the MLflow model registry.

@@ -31,37 +31,36 @@ llm_endpoint_name: str = databricks_resources.get("llm_endpoint_name")
 llm: BaseChatModel = get_llm(llm_endpoint_name)
 
 
-unity_catalog_agent: Agent = create_unity_catalog_agent(
-  llm=llm,
-  warehouse_id=databricks_resources.get("warehouse_id"),
-  functions=[databricks_resources.get("unity_catalog_functions")],
-)
-
 genie_agent: Agent = create_genie_agent(
     llm=llm,
     space_id=space_id,
 )
 
 vector_search_schema: Dict[str, str] = retriever_config.get("schema")
-
+    
 vector_search_agent: Agent = create_vector_search_agent(
   llm=llm,
   endpoint_name = databricks_resources.get("vector_search_endpoint_name"),
   index_name = retriever_config.get("vector_search_index"),
+  primary_key = vector_search_schema.get("primary_key"),
+  text_column = vector_search_schema.get("chunk_text"),
+  doc_uri = vector_search_schema.get("document_uri"),
   columns = [
       vector_search_schema.get("primary_key"),
       vector_search_schema.get("chunk_text"),
       vector_search_schema.get("document_uri"),
   ],
   parameters = retriever_config.get("parameters"),
+  description="""
+    Answer all questions processes, checklists, troubleshooting and how-to guides
+  """
 )
 
 builder: GraphBuilder = (
   GraphBuilder(llm=llm)
     .add_agent(vector_search_agent)
     .add_agent(genie_agent)
-    .add_agent(unity_catalog_agent)
-    #.with_debug()
+    .with_debug()
     #.with_memory()
 )
 
