@@ -1,10 +1,10 @@
 databricks_resources:
 
   catalog_name: pandas_poc
-  database_name: quisitive
+  database_name: paws
   volume_name: raw
 
-  registered_model_name: "pandas_poc.quisitive.compound_ai_langgraph"
+  registered_model_name: "pandas_poc.paws.compound_ai_langgraph"
 
   genie_space_id: 01efa0fa59d61c509a31665344f6c739
   genie_workspace_host: adb-984752964297111.11.azuredatabricks.net
@@ -14,9 +14,9 @@ databricks_resources:
   vector_search_endpoint_name: one-env-shared-endpoint-12
 
   warehouse_id: foo
-  unity_catalog_functions: "pandas_poc.quisitive.*"
+  unity_catalog_functions: "pandas_poc.paws.*"
   
-  evaluation_table_name: pandas_poc.quisitive.evaluation
+  evaluation_table_name: pandas_poc.paws.evaluation
   
   users:
   - nate.fleming@databricks.com
@@ -39,6 +39,6 @@ retriever_config:
     embedding_source_column: content
     document_uri: url
     primary_key: id
-  vector_search_index: pandas_poc.quisitive.documents_chunked_vs_index
-  source_table_name: pandas_poc.quisitive.documents_chunked
+  vector_search_index: pandas_poc.paws.documents_chunked_vs_index
+  source_table_name: pandas_poc.paws.documents_chunked
 

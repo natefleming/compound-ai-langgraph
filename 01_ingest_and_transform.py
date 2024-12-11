@@ -116,16 +116,6 @@ spark.sql(f"""
 
 # COMMAND ----------
 
-# MAGIC %sh rm -rf /Volumes/pandas_poc/quisitive/raw/checkpoints/raw_docs
-
-# COMMAND ----------
-
-spark.sql(f"""
-  DROP TABLE IF EXISTS {catalog_name}.{database_name}.raw_docs
-""")
-
-# COMMAND ----------
-
 from pyspark.sql import DataFrame
 
 import pyspark.sql.functions as F
@@ -155,25 +145,6 @@ display(spark.table(f"{catalog_name}.{database_name}.raw_docs"))
 
 # COMMAND ----------
 
-# from typing import List
-
-# import warnings
-# from pypdf import PdfReader
-# from io import BytesIO
-
-
-# def parse_bytes_pypdf(raw_doc_contents_bytes: bytes) -> str:
-#     try:
-#         pdf: BytesIO = BytesIO(raw_doc_contents_bytes)
-#         reader: PdfReader = PdfReader(pdf)
-#         parsed_content: List[str] = [page_content.extract_text() for page_content in reader.pages]
-#         return "\n".join(parsed_content)
-#     except Exception as e:
-#         warnings.warn(f"Exception {e} has been thrown during parsing")
-#         return None
-
-# COMMAND ----------
-
 from typing import Iterator
 
 from llama_index.core.node_parser import SentenceSplitter
@@ -187,11 +158,8 @@ import pyspark.sql.functions as F
 
 from app.udf import parse_bytes
 
-from docling_core.transforms.chunker import HierarchicalChunker
-
 # Reduce the arrow batch size as our PDF can be big in memory
 spark.conf.set("spark.sql.execution.arrow.maxRecordsPerBatch", 10)
-
 
 @F.pandas_udf("array<string>")
 def read_as_chunk(batch_iter: Iterator[pd.Series]) -> Iterator[pd.Series]:
@@ -216,15 +184,6 @@ def read_as_chunk(batch_iter: Iterator[pd.Series]) -> Iterator[pd.Series]:
 
 source_table_checkpoint_path: Path = volume.as_path() / "checkpoints/document_chunked"
 print(source_table_checkpoint_path)
-
-# COMMAND ----------
-
-# MAGIC %sh rm -rf /Volumes/pandas_poc/quisitive/raw/checkpoints/document_chunked
-# MAGIC
-
-# COMMAND ----------
-
-spark.sql(f"DROP TABLE IF EXISTS {source_table_name}")
 
 # COMMAND ----------
 

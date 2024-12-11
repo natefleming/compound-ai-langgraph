@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python,macos,vim,venv,visualstudiocode,dotenv
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,macos,vim,venv,visualstudiocode,dotenv
 
+
+model_config.yaml
+
 ### dotenv ###
 .env
 
