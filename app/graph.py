@@ -20,9 +20,7 @@ from mlflow.langchain.output_parsers import (
 from guardrails.guard import Guard
 
 from app.router import route
-from app.agents import Agent, create_agent
-from app.prompts import router_prompt
-from app.tools import create_router_tool
+from app.agents import Agent, create_router_agent
 from app.messages import latest_message_content, first_message, apply_guard
 
 
@@ -132,7 +130,7 @@ class GraphBuilder(object):
         Returns:
             StateGraph: The constructed state graph.
         """
-        self.add_agent(self.router_agent())
+        self.add_agent(create_router_agent(llm=self._llm, agents=self._agents))
 
         nodes: Dict[str, str] = {
             "tools": "tools",
@@ -165,21 +163,6 @@ class GraphBuilder(object):
 
         return compiled_state_graph
 
-    def router_agent(self) -> Agent:
-        """
-        Creates a router agent for the graph.
-
-        Returns:
-            Agent: The created router agent.
-        """
-        prompt: str = router_prompt()
-        router_tool: Tool = create_router_tool(choices=self.agents)
-
-        router_agent: Agent = create_agent(
-            name="router", llm=self._llm, prompt=prompt, tools=[router_tool]
-        )
-
-        return router_agent
 
     @property
     def agents(self) -> List[Agent]:
