@@ -29,6 +29,7 @@ def vector_search_prompt(tool_name: str) -> str:
         You have access to `{tool_name}` to answer the question.
         You MUST ALWAYS use the tools provided. 
         NEVER add additional information which did not come from tools.
+        ALWAYS call the tool `{tool_name}` EXACTLY ONCE.
         If you are unable to help the user, you can say so.
     """).strip()
     return prompt

@@ -1,7 +1,7 @@
 from typing import List
 from langchain_core.messages import AIMessage, BaseMessage
 from langgraph.graph import END
-from app.agents import Agent
+
 
 def filter_out_routes(messages: List[BaseMessage]) -> List[BaseMessage]:
     """Filters out messages that are tool calls to the router.
