@@ -11,8 +11,19 @@ from guardrails.guard import Guard
 
 from app.router import filter_out_routes
 from app.messages import add_name
-from app.tools import create_genie_tool, create_vector_search_tool, create_unity_catalog_tools
-from app.prompts import genie_prompt, vector_search_prompt, unity_catalog_prompt
+from app.tools import (
+    create_genie_tool, 
+    create_vector_search_tool, 
+    create_unity_catalog_tools, 
+    create_router_tool
+)
+
+from app.prompts import (
+    genie_prompt, 
+    vector_search_prompt, 
+    unity_catalog_prompt, 
+    router_prompt
+)
 
 
 class AgentBase(ABC):
@@ -46,6 +57,7 @@ class Agent(AgentBase):
     def __init__(
         self,
         name: str,
+        description: str,
         llm: BaseChatModel,
         prompt: Optional[str] = None,
         tools: List[Tool] = [],
@@ -55,12 +67,14 @@ class Agent(AgentBase):
 
         Args:
             name (str): The name of the agent.
+            description (str): The description of the agent.
             llm (BaseChatModel): The language model to be used by the agent.
             prompt (Optional[str], optional): The prompt for the agent. Defaults to None.
             tools (List[Tool], optional): The tools to be used by the agent. Defaults to [].
             post_guard (Optional[Guard], optional): The guard to be used after execution. Defaults to None.
         """
         self.name = name
+        self.description = description
         self.llm = llm
         self.prompt = prompt
         self.tools = tools
@@ -103,6 +117,7 @@ class Agent(AgentBase):
 
 def create_agent(
     name: str,
+    description: str,
     llm: BaseChatModel,
     prompt: Optional[str] = None,
     tools: List[Tool] = [],
@@ -112,6 +127,7 @@ def create_agent(
 
     Args:
         name (str): The name of the agent.
+        description (str): The description of the agent.
         llm (BaseChatModel): The language model to be used by the agent.
         prompt (Optional[str], optional): The prompt for the agent. Defaults to None.
         tools (List[Tool], optional): The tools to be used by the agent. Defaults to [].
@@ -120,14 +136,39 @@ def create_agent(
     Returns:
         Agent: The created agent.
     """
-    return Agent(name=name, llm=llm, prompt=prompt, tools=tools, post_guard=post_guard)
+    return Agent(
+        name=name, 
+        description=description, 
+        llm=llm, 
+        prompt=prompt, 
+        tools=tools,
+        post_guard=post_guard
+    )
 
 
+def create_router_agent(
+    llm: BaseChatModel,
+    agents: List[Agent],
+    name: str = "router",
+    description: str = "Responsible for classifying and routing user prompts"
+) -> Agent:
+
+    prompt: str = router_prompt(agents=agents)
+    router_tool: Tool = create_router_tool(choices=agents)
+
+    router_agent: Agent = create_agent(
+        name=name, description=description, llm=llm, prompt=prompt, tools=[router_tool]
+    )
+
+    return router_agent
+
+        
 def create_unity_catalog_agent(
     llm: BaseChatModel,
     warehouse_id: str,
     functions: List[str],
-    name: Optional[str] = "unity_catalog"
+    name: Optional[str] = "unity_catalog",
+    description: Optional[str] = "Answer questions using Unity Catalog tools and functions."
 ) -> Agent:
     """Creates a Unity Catalog agent.
 
@@ -136,6 +177,7 @@ def create_unity_catalog_agent(
         warehouse_id (str): The warehouse ID.
         functions (List[str]): The list of functions.
         name (Optional[str], optional): The name of the agent. Defaults to "unity_catalog".
+        description (Optional[str], optional): The description of the agent. Defaults to "Answer questions using Unity Catalog tools and functions.".
 
     Returns:
         Agent: The created Unity Catalog agent.
@@ -148,6 +190,7 @@ def create_unity_catalog_agent(
 
     unity_catalog_agent: Agent = create_agent(
         name=name,
+        description=description,
         llm=llm,
         prompt=prompt,
         tools=unity_catalog_tools
@@ -161,7 +204,8 @@ def create_genie_agent(
     space_id: str,
     workspace_host: Optional[str] = None,
     token: Optional[str] = None,
-    name: Optional[str] = "genie"
+    name: Optional[str] = "genie",
+    description: Optional[str] = "Answer questions using Databricks Genie tools."
 ) -> Agent:
     """Creates a Genie agent.
 
@@ -171,7 +215,7 @@ def create_genie_agent(
         workspace_host (Optional[str], optional): The workspace host. Defaults to None.
         token (Optional[str], optional): The token. Defaults to None.
         name (Optional[str], optional): The name of the agent. Defaults to "genie".
-
+        description (Optional[str], optional): The description of the agent. Defaults to "Answer questions using Databricks Genie tools.".
     Returns:
         Agent: The created Genie agent.
     """
@@ -184,6 +228,7 @@ def create_genie_agent(
 
     genie_agent: Agent = create_agent(
         name=name,
+        description=description,
         llm=llm,
         prompt=prompt,
         tools=[genie_tool]
@@ -199,6 +244,7 @@ def create_vector_search_agent(
     columns: List[str] = None,
     parameters: Dict[str, Any] = None,
     name: Optional[str] = "vector_search",
+    description: Optional[str] = "Answer questions about Databricks"
 ) -> Agent:
     """Creates a Vector Search agent.
 
@@ -209,7 +255,7 @@ def create_vector_search_agent(
         columns (List[str], optional): The list of columns. Defaults to None.
         parameters (Dict[str, Any], optional): The parameters. Defaults to None.
         name (Optional[str], optional): The name of the agent. Defaults to "vector_search".
-
+        description (Optional[str], optional): The description of the agent. Defaults to "Answer questions about Databricks".
     Returns:
         Agent: The created Vector Search agent.
     """
@@ -220,10 +266,11 @@ def create_vector_search_agent(
         parameters=parameters,
     )
 
-    prompt: str = vector_search_prompt()
+    prompt: str = vector_search_prompt(tool_name=vector_search_tool.name)
 
     vector_search_agent: Agent = create_agent(
         name=name,
+        description=description,
         llm=llm,
         prompt=prompt,
         tools=[vector_search_tool]

@@ -1,4 +1,8 @@
-model_config.*
+# Created by https://www.toptal.com/developers/gitignore/api/python,macos,vim,venv,visualstudiocode,dotenv
+# Edit at https://www.toptal.com/developers/gitignore?templates=python,macos,vim,venv,visualstudiocode,dotenv
+
+### dotenv ###
+.env
 
 ### macOS ###
 # General
@@ -156,7 +160,6 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
 .venv
 env/
 venv/
@@ -237,3 +240,24 @@ Sessionx.vim
 tags
 # Persistent undo
 [._]*.un~
+
+### VisualStudioCode ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+### VisualStudioCode Patch ###
+# Ignore all local history of files
+.history
+.ionide
+
+# End of https://www.toptal.com/developers/gitignore/api/python,macos,vim,venv,visualstudiocode,dotenv
