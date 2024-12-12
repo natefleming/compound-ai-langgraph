@@ -11,26 +11,6 @@ from langchain.schema import Document
 from typing import List
 
 
-class MetadataMapperRetriever(VectorStoreRetriever):
-
-    def __init__(self, target: VectorStoreRetriever) -> None:
-        #super().__init__()  # Initialize base class
-        self.target = target
-
-    def get_relevant_documents(self, query: str) -> List[Document]:
-        documents = self.target.get_relevant_documents(query)
-        for doc in documents:
-            if "url" in doc.metadata:
-                doc.metadata["source"] = doc.metadata["url"]  # Map 'url' to 'source'
-        return documents
-
-    def add_document(self, *args, **kwargs):
-        return self.target.add_document(*args, **kwargs)
-
-    def close(self):
-        self.target.close()
-
-
 def create_vector_search_retriever(
     endpoint_name: str,
     index_name: str,
@@ -52,8 +32,6 @@ def create_vector_search_retriever(
         vector_search.as_retriever(search_kwargs=parameters)
     )
 
-    retriever: MetadataMapperRetriever = MetadataMapperRetriever(target=vector_search_as_retriever)
-
     mlflow.models.set_retriever_schema(
         name=index_name,
         primary_key=primary_key,
@@ -61,4 +39,4 @@ def create_vector_search_retriever(
         doc_uri=doc_uri,
     )
     
-    return retriever
+    return vector_search_as_retriever

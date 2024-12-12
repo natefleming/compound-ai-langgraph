@@ -134,9 +134,10 @@ question = "How can add a fundraiser key?"
 
 index: VectorSearchIndex = vsc.get_index(vector_search_endpoint_name, vector_search_index)
 
+document_uri: str = "source"
 search_results: Dict[str, Any] = index.similarity_search(
   query_text=question,
-  columns=["url", "content"],
+  columns=[document_uri, "content"],
   num_results=3)
 
 chunks: List[str] = search_results.get('result', {}).get('data_array', [])

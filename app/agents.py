@@ -202,27 +202,26 @@ def create_vector_search_chain(
                 RunnableSequence: The runnable sequence.
             """
 
-            # chain: RunnableSequence = (
-            #     RunnableLambda(filter_out_routes) |
-            #     RunnableLambda(super()._get_messages) |
-            #     qa_chain |
-            #     partial(add_name, name=self.name)
-            # )
-
-            def chain(messages: List[BaseMessage]) -> List[BaseMessage]:
+            def run_qa_chain(messages: List[BaseMessage]) -> BaseMessage:
                 message: HumanMessage = get_last_human_message(messages)
                 if not message:
-                    raise ValueError("No HumanMessage found in messages")
+                    raise ValueError("No Human Message found in messages")
 
                 question: str = message.content
-                result = qa_chain.invoke({"question": question})
-                    
-                # Map the output back to a BaseMessage
-                return [AIMessage(content=result["answer"])]
+                result: Dict[str, Any] = qa_chain.invoke({"question": question})
+                answer: str = result["answer"]
+                sources: str = result["sources"]
+
+                return AIMessage(content=answer)
             
+            chain: RunnableSequence = (
+                RunnableLambda(filter_out_routes) |
+                RunnableLambda(run_qa_chain) |
+                partial(add_name, name=self.name)
+            )
 
 
-            return RunnableLambda(chain)
+            return chain
          
 
     agent: Agent = _Agent()
