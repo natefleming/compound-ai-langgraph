@@ -1,8 +1,22 @@
 from typing import Any, Dict, List
 from langchain_core.runnables import Runnable
-from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from guardrails.guard import Guard
 from guardrails.classes.validation_outcome import ValidationOutcome
+
+def get_last_human_message(messages: List[BaseMessage]) -> HumanMessage:
+    """Gets the last HumanMessage from a list of messages.
+
+    Args:
+        messages (List[BaseMessage]): List of messages to search.
+
+    Returns:
+        HumanMessage: The last HumanMessage found, or None if not found.
+    """
+    for m in messages[::-1]:
+        if isinstance(m, HumanMessage):
+            return m
+    return None
 
 def apply_guard(messages: List[BaseMessage], guard: Guard) -> List[BaseMessage]:
     """Applies guard validation to the last message in the list.

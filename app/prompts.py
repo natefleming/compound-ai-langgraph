@@ -18,7 +18,7 @@ def unity_catalog_prompt() -> str:
     return prompt
 
 
-def vector_search_prompt(tool_name: str) -> str:
+def vector_search_agent_prompt(tool_name: str) -> str:
     """Generates a prompt for assisting users with Databricks Documentation queries.
 
     Returns:
@@ -34,6 +34,24 @@ def vector_search_prompt(tool_name: str) -> str:
     """).strip()
     return prompt
 
+def vector_search_chain_prompt() -> str:
+    """Generates a prompt for assisting users with Databricks Documentation queries.
+
+    Returns:
+        str: The generated prompt.
+    """
+    prompt: str = dedent("""
+        Your job is to help a user find information from Databricks Documentation.
+    
+        Summaries: 
+        {summaries}
+
+        Question:
+        {question}
+
+        Answer:
+    """).strip()
+    return prompt
 
 def genie_prompt(tool_name: str) -> str:
     """Generates a prompt for assisting users with Genie-related queries.

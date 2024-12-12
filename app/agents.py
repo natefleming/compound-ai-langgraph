@@ -2,15 +2,19 @@ from typing import Any, Dict, Optional, List
 from abc import ABC, abstractmethod
 from functools import partial
 
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain.tools import Tool
+
 from langchain_core.runnables import RunnableSequence, RunnableLambda
-from langchain_core.messages import SystemMessage, BaseMessage
+from langchain_core.messages import SystemMessage, BaseMessage, HumanMessage, AIMessage
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.vectorstores.base import VectorStoreRetriever
+from langchain.chains import RetrievalQAWithSourcesChain, RetrievalQA
+from langchain.prompts import PromptTemplate
+from langchain.tools import Tool
 
 from guardrails.guard import Guard
 
 from app.router import filter_out_routes
-from app.messages import add_name
+from app.messages import add_name, get_last_human_message
 from app.tools import (
     create_genie_tool, 
     create_vector_search_tool, 
@@ -20,11 +24,12 @@ from app.tools import (
 
 from app.prompts import (
     genie_prompt, 
-    vector_search_prompt, 
+    vector_search_agent_prompt, 
+    vector_search_chain_prompt,
     unity_catalog_prompt, 
     router_prompt
 )
-
+from app.retrievers import create_vector_search_retriever
 
 class AgentBase(ABC):
     """Abstract base class for agents."""
@@ -88,31 +93,33 @@ class Agent(AgentBase):
         Returns:
             RunnableSequence: The runnable sequence.
         """
-        def _get_messages(messages: List[BaseMessage]) -> List[BaseMessage]:
-            """Prepends the prompt to the messages if it exists.
-
-            Args:
-                messages (List[BaseMessage]): The list of messages.
-
-            Returns:
-                List[BaseMessage]: The modified list of messages.
-            """
-            result_messages: List[BaseMessage]
-            if self.prompt is not None:
-                result_messages = [SystemMessage(content=self.prompt)] + messages
-            else:
-                result_messages = messages
-
-            return result_messages
 
         chain: RunnableSequence = (
             RunnableLambda(filter_out_routes) |
-            RunnableLambda(_get_messages) |
+            RunnableLambda(self._get_messages) |
             self.llm.bind_tools(self.tools) |
             partial(add_name, name=self.name)
         )
 
         return chain
+    
+    def _get_messages(self, messages: List[BaseMessage]) -> List[BaseMessage]:
+        """Prepends the prompt to the messages if it exists.
+
+        Args:
+            messages (List[BaseMessage]): The list of messages.
+
+        Returns:
+            List[BaseMessage]: The modified list of messages.
+        """
+        result_messages: List[BaseMessage]
+        if self.prompt is not None:
+            result_messages = [SystemMessage(content=self.prompt)] + messages
+        else:
+            result_messages = messages
+
+        return result_messages
+
 
 
 def create_agent(
@@ -144,6 +151,83 @@ def create_agent(
         tools=tools,
         post_guard=post_guard
     )
+
+def create_vector_search_chain(
+    llm: BaseChatModel,
+    endpoint_name: str,
+    index_name: str,
+    primary_key: str,
+    text_column: str,
+    doc_uri: str,
+    columns: Optional[List[str]] = None,
+    parameters: Optional[Dict[str, Any]] = None,
+    name: Optional[str] = "vector_search_chain",
+    description: Optional[str] = "Answer questions about Databricks"
+) -> Agent:
+    
+    prompt_template: str = vector_search_chain_prompt()
+   
+    prompt: PromptTemplate = PromptTemplate(
+        #input_variables=["context", "question"],
+        input_variables=["summaries", "question"],
+        template=prompt_template
+    )
+
+    vector_search_as_retriever: VectorStoreRetriever = create_vector_search_retriever(
+        endpoint_name=endpoint_name,
+        index_name=index_name,
+        primary_key=primary_key,
+        text_column=text_column,
+        doc_uri=doc_uri,
+        columns=columns,
+        parameters=parameters,
+    )
+
+    qa_chain: RunnableSequence = RetrievalQAWithSourcesChain.from_chain_type(
+        llm=llm,
+        retriever=vector_search_as_retriever,
+        chain_type="stuff",
+        chain_type_kwargs={"prompt": prompt}
+    )
+
+    class _Agent(Agent):
+
+        def __init__(self) -> None:
+            super().__init__(name=name, description=description, llm=llm)
+
+        def as_runnable(self) -> RunnableSequence:
+            """Converts the agent to a runnable sequence.
+
+            Returns:
+                RunnableSequence: The runnable sequence.
+            """
+
+            # chain: RunnableSequence = (
+            #     RunnableLambda(filter_out_routes) |
+            #     RunnableLambda(super()._get_messages) |
+            #     qa_chain |
+            #     partial(add_name, name=self.name)
+            # )
+
+            def chain(messages: List[BaseMessage]) -> List[BaseMessage]:
+                message: HumanMessage = get_last_human_message(messages)
+                if not message:
+                    raise ValueError("No HumanMessage found in messages")
+
+                question: str = message.content
+                result = qa_chain.invoke({"question": question})
+                    
+                # Map the output back to a BaseMessage
+                return [AIMessage(content=result["answer"])]
+            
+
+
+            return RunnableLambda(chain)
+         
+
+    agent: Agent = _Agent()
+
+    return agent
 
 
 def create_router_agent(
@@ -276,7 +360,7 @@ def create_vector_search_agent(
         parameters=parameters,
     )
 
-    prompt: str = vector_search_prompt(tool_name=vector_search_tool.name)
+    prompt: str = vector_search_agent_prompt(tool_name=vector_search_tool.name)
 
     vector_search_agent: Agent = create_agent(
         name=name,

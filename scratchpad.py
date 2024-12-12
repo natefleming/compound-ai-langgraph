@@ -62,6 +62,7 @@ import app.messages
 import app.agents
 import app.prompts
 import app.router
+import app.retrievers
 import app.tools
 import app.catalog
 import app.guardrails.validators
@@ -85,6 +86,7 @@ from app.agents import (
   Agent, 
   create_genie_agent,
   create_vector_search_agent,
+  create_vector_search_chain,
   create_unity_catalog_agent,
 )
 
@@ -109,7 +111,7 @@ genie_agent: Agent = create_genie_agent(
 
 vector_search_schema: Dict[str, str] = retriever_config.get("schema")
     
-vector_search_agent: Agent = create_vector_search_agent(
+vector_search_agent: Agent = create_vector_search_chain(
   llm=llm,
   endpoint_name = databricks_resources.get("vector_search_endpoint_name"),
   index_name = retriever_config.get("vector_search_index"),
@@ -140,6 +142,10 @@ graph: StateGraph = builder.build()
 chain: RunnableSequence = graph.as_chain()
 
 mlflow.models.set_model(chain)
+
+# COMMAND ----------
+
+vector_search_agent.as_runnable().invoke(messages)
 
 # COMMAND ----------
 

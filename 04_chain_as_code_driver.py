@@ -58,6 +58,7 @@ import app.messages
 import app.agents
 import app.prompts
 import app.router
+import app.retrievers
 import app.tools
 import app.catalog
 import app.guardrails.validators
@@ -80,7 +81,7 @@ print(f"{evaluation_table_name=}")
 
 # COMMAND ----------
 
-from typing import Union
+from typing import Union, Tuple, Optional
 from pathlib import Path
 
 import mlflow
@@ -111,7 +112,11 @@ signature: ModelSignature = ModelSignature(
 
 evalution_pdf: pd.DataFrame = spark.table(evaluation_table_name).toPandas()
 
-def log_and_evaluate_agent(run_name: str, model_config: Union[ModelConfig, Dict[str, Any]]):
+def log_and_evaluate_agent(
+    run_name: str, 
+    model_config: Union[ModelConfig, Dict[str, Any]], 
+    should_evaluate: bool = True
+) -> Tuple[ModelInfo, EvaluationResult]:
 
     if isinstance(model_config, ModelConfig):
         model_config = model_config.to_dict()
@@ -142,11 +147,13 @@ def log_and_evaluate_agent(run_name: str, model_config: Union[ModelConfig, Dict[
         )
         print(model_info.registered_model_version)
 
-        eval_results: EvaluationResult = mlflow.evaluate(
-            data=evalution_pdf,             # Your evaluation set
-            model=model_info.model_uri,     # Logged agent from above
-            model_type="databricks-agent",  # activate Mosaic AI Agent Evaluation
-        )
+        eval_results: Optional[EvaluationResult] = None
+        if should_evaluate:
+            eval_results = mlflow.evaluate(
+                data=evalution_pdf,             # Your evaluation set
+                model=model_info.model_uri,     # Logged agent from above
+                model_type="databricks-agent",  # activate Mosaic AI Agent Evaluation
+            )
         return (model_info, eval_results)
 
 
