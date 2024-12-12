@@ -14,6 +14,7 @@ from app.agents import (
   Agent, 
   create_genie_agent,
   create_vector_search_agent,
+  create_vector_search_chain,
   create_unity_catalog_agent,
 )
 
@@ -38,7 +39,7 @@ genie_agent: Agent = create_genie_agent(
 
 vector_search_schema: Dict[str, str] = retriever_config.get("schema")
     
-vector_search_agent: Agent = create_vector_search_agent(
+create_vector_search_chain: Agent = create_vector_search_chain(
   llm=llm,
   endpoint_name = databricks_resources.get("vector_search_endpoint_name"),
   index_name = retriever_config.get("vector_search_index"),
@@ -58,7 +59,7 @@ vector_search_agent: Agent = create_vector_search_agent(
 
 builder: GraphBuilder = (
   GraphBuilder(llm=llm)
-    .add_agent(vector_search_agent)
+    .add_agent(create_vector_search_chain)
     .add_agent(genie_agent)
     .with_debug()
     #.with_memory()

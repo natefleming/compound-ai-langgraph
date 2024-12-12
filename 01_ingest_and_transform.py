@@ -98,10 +98,12 @@ spark.sql(f"USE {catalog.name}.{database_name}")
 
 from pathlib import Path
 
+#prgsupportdocuments.default.pandakb
+
 raw_documents_path: Path = volume.as_path() / "sample_documents"
 raw_checkpoint_path: Path = volume.as_path() / "checkpoints/raw_docs"
 
-w.files.create_directory(raw_documents_path)
+w.files.create_directory(raw_documents_path.as_posix())
 
 # COMMAND ----------
 

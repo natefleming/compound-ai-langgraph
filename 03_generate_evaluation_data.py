@@ -33,7 +33,7 @@ print(f"{source_table_name=}")
 from pyspark.sql import DataFrame
 import pandas as pd
 
-parsed_docs_df: DataFrame = spark.table(source_table_name).withColumnRenamed("url", "doc_uri")
+parsed_docs_df: DataFrame = spark.table(source_table_name).withColumnRenamed("source", "doc_uri")
 parsed_docs_pdf: pd.DataFrame = parsed_docs_df.toPandas()
 
 display(parsed_docs_pdf)
@@ -62,7 +62,7 @@ question_guidelines = f"""
 - Questions should be succinct, and human-like
 """
 
-num_evals = 25
+num_evals: int = 30
 evals_pdf: pd.DataFrame = generate_evals_df(
     docs=parsed_docs_pdf[
         :500

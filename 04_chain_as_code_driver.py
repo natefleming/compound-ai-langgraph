@@ -76,8 +76,13 @@ databricks_resources: Dict[str, Any] = model_config.get("databricks_resources")
 registered_model_name: str = databricks_resources.get("registered_model_name")
 evaluation_table_name: str = databricks_resources.get("evaluation_table_name")
 
+secret_scope: str = databricks_resources.get("scope_name")
+secret_name: str = databricks_resources.get("secret_name")
+
 print(f"{registered_model_name=}") 
 print(f"{evaluation_table_name=}")
+print(f"{secret_scope=}")
+print(f"{secret_name=}")
 
 # COMMAND ----------
 
@@ -236,10 +241,10 @@ deployment: Deployment = deploy(
     registered_model_name, 
     latest_model_version,
     environment_vars={
-       # "DATABRICKS_TOKEN": f"{{secrets/{scope}/databricks_token}}", 
-       # "DATABRICKS_HOST": f"{{secrets/{scope}/databricks_host}}", 
+        "DATABRICKS_TOKEN": f"{{secrets/{secret_scope}/{secret_name}}}", 
+        #"DATABRICKS_HOST": f"{{secrets/{scope}/databricks_host}}", 
         "DATABRICKS_HOST": os.environ["DATABRICKS_HOST"], 
-        "DATABRICKS_TOKEN": os.environ["DATABRICKS_TOKEN"], 
+        #"DATABRICKS_TOKEN": os.environ["DATABRICKS_TOKEN"], 
     }
 )
 
