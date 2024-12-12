@@ -9,12 +9,10 @@ from langchain_community.tools.databricks import UCFunctionToolkit
 
 from databricks_langchain.genie import Genie
 
-import mlflow.models
+from app.retrievers import create_vector_search_retriever
 
-def create_unity_catalog_tools(
-    warehouse_id: str, 
-    functions: List[str]
-) -> List[Tool]:
+
+def create_unity_catalog_tools(warehouse_id: str, functions: List[str]) -> List[Tool]:
     """Creates a list of Unity Catalog tools.
 
     Args:
@@ -24,14 +22,11 @@ def create_unity_catalog_tools(
     Returns:
         List[Tool]: A list of tools created from the Unity Catalog functions.
     """
-    uc_function_toolkit: UCFunctionToolkit = (
-        UCFunctionToolkit(
-            warehouse_id=warehouse_id
-        ).include(
-            *functions
-        )
-    )
+    uc_function_toolkit: UCFunctionToolkit = UCFunctionToolkit(
+        warehouse_id=warehouse_id
+    ).include(*functions)
     return uc_function_toolkit.get_tools()
+
 
 def create_vector_search_tool(
     endpoint_name: str,
@@ -58,33 +53,28 @@ def create_vector_search_tool(
     Returns:
         Tool: The created vector search tool.
     """
-    vector_search: DatabricksVectorSearch = DatabricksVectorSearch(
+
+    vector_search_as_retriever: VectorStoreRetriever = create_vector_search_retriever(
+        endpoint_name=endpoint_name,
         index_name=index_name,
-        endpoint=endpoint_name,
-        text_column=text_column,
-        columns=columns,
-    )
-    vector_search_as_retriever: VectorStoreRetriever = (
-        vector_search.as_retriever(search_kwargs=parameters)
-    )
-    vector_search_tool: Tool = vector_search_as_retriever.as_tool(
-        name=name, 
-        description=description
-    )
-    
-    mlflow.models.set_retriever_schema(
-        name=index_name,
         primary_key=primary_key,
         text_column=text_column,
         doc_uri=doc_uri,
+        columns=columns,
+        parameters=parameters,
+    )
+    
+    vector_search_tool: Tool = vector_search_as_retriever.as_tool(
+        name=name, description=description
     )
 
     return vector_search_tool
 
+
 def create_genie_tool(
     space_id: Optional[str] = None,
     workspace_host: Optional[str] = None,
-    token: Optional[str] = None
+    token: Optional[str] = None,
 ) -> Tool:
     """Creates a Genie tool.
 
@@ -105,7 +95,7 @@ def create_genie_tool(
     def genie_tool(question: str) -> str:
         """
         This tool lets you have a conversation and chat with tabular data about <topic>. You should ask
-        questions about the data and the tool will try to answer them. 
+        questions about the data and the tool will try to answer them.
         Please ask simple clear questions that can be answer by sql queries. If you need to do statistics or other forms of testing defer to using another tool.
         Try to ask for aggregations on the data and ask very simple questions. Prefer to call this tool multiple times rather than asking a complex question.
 
@@ -117,10 +107,11 @@ def create_genie_tool(
         """
         answer: str = genie_client.ask_question(question)
         return answer
-    
+
     return genie_tool
 
-def create_router_tool(choices: List['Agent']) -> Tool:
+
+def create_router_tool(choices: List["Agent"]) -> Tool:
     """Creates a router tool.
 
     Args:
@@ -130,11 +121,12 @@ def create_router_tool(choices: List['Agent']) -> Tool:
         Tool: The created router tool.
     """
     agent_names: List[str] = [a.name for a in choices]
-    
+
     class Router(BaseModel):
         """
         Call this if you are able to route the user to the appropriate representative.
         """
+
         choice: str = Field(description=f"should be one of: {','.join(agent_names)}")
 
     return Router
