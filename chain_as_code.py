@@ -53,7 +53,8 @@ create_vector_search_chain: Agent = create_vector_search_chain(
   ],
   parameters = retriever_config.get("parameters"),
   description="""
-    Answer all questions processes, checklists, troubleshooting and how-to guides
+    Answer all questions about processes, checklists, troubleshooting and how-to guides.
+    Always respond with a markdown list of sources and citations.
   """
 )
 
@@ -61,7 +62,7 @@ builder: GraphBuilder = (
   GraphBuilder(llm=llm)
     .add_agent(create_vector_search_chain)
     .add_agent(genie_agent)
-    .with_debug()
+    #.with_debug()
     #.with_memory()
 )
 

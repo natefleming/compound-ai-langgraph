@@ -111,7 +111,7 @@ genie_agent: Agent = create_genie_agent(
 
 vector_search_schema: Dict[str, str] = retriever_config.get("schema")
     
-create_vector_search_chain: Agent = create_vector_search_chain(
+create_vector_search_agent: Agent = create_vector_search_chain(
   llm=llm,
   endpoint_name = databricks_resources.get("vector_search_endpoint_name"),
   index_name = retriever_config.get("vector_search_index"),
@@ -124,15 +124,13 @@ create_vector_search_chain: Agent = create_vector_search_chain(
       vector_search_schema.get("document_uri"),
   ],
   parameters = retriever_config.get("parameters"),
-  description="""
-    Answer all questions processes, checklists, troubleshooting and how-to guides
-  """
 )
 
 builder: GraphBuilder = (
   GraphBuilder(llm=llm)
-    .add_agent(create_vector_search_chain)
+    .add_agent(create_vector_search_agent)
     .add_agent(genie_agent)
+    .default_agent(create_vector_search_agent)
     .with_debug()
     #.with_memory()
 )
@@ -142,11 +140,6 @@ graph: StateGraph = builder.build()
 chain: RunnableSequence = graph.as_chain()
 
 mlflow.models.set_model(chain)
-
-# COMMAND ----------
-
-mlflow.langchain.autolog(disable=False)
-create_vector_search_chain.as_runnable().invoke(messages)
 
 # COMMAND ----------
 
@@ -200,6 +193,24 @@ final_state = chain.invoke(
 # final_state: List[BaseMessage] = graph.invoke(messages, config=config)
 # final_state[-1].content
 
+
+
+# COMMAND ----------
+
+from typing import List
+
+from langchain_core.messages import HumanMessage
+
+mlflow.langchain.autolog(disable=False)
+
+message: str = "What is 9 * 49?"
+messages: List[HumanMessage] = [HumanMessage(content=message)]
+config: Dict[str, Any] = {
+    "configurable": {"thread_id": 42}
+}
+
+response: Dict[str, Any] = chain.invoke(messages, config=config)
+response
 
 
 # COMMAND ----------

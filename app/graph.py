@@ -73,8 +73,9 @@ class GraphBuilder(object):
         self._memory: Optional[MemorySaver] = None
         self._debug: bool = False
         self._entry_point: str = "router"
+        self._default_agent: Agent = None
 
-    def add_agent(self, agent) -> "GraphBuilder":
+    def add_agent(self, agent: Agent) -> "GraphBuilder":
         """
         Adds an agent to the graph.
 
@@ -85,6 +86,10 @@ class GraphBuilder(object):
             GraphBuilder: The current instance of GraphBuilder.
         """
         self._agents.append(agent)
+        return self
+    
+    def default_agent(self, agent: Agent) -> "GraphBuilder":
+        self._default_agent = agent
         return self
 
     def with_memory(self) -> "GraphBuilder":
@@ -107,7 +112,7 @@ class GraphBuilder(object):
         self._debug = True
         return self
 
-    def with_entry_point(self, node: Union[str | Agent]) -> "GraphBuilder":
+    def with_entry_point(self, node: Union[str, Agent]) -> "GraphBuilder":
         """
         Sets the entry point for the graph.
 
@@ -130,7 +135,8 @@ class GraphBuilder(object):
         Returns:
             StateGraph: The constructed state graph.
         """
-        self.add_agent(create_router_agent(llm=self._llm, agents=self._agents))
+        router_agent: Agent = create_router_agent(llm=self._llm, agents=self._agents, default_agent=self._default_agent)
+        self.add_agent(router_agent)
 
         nodes: Dict[str, str] = {
             "tools": "tools",

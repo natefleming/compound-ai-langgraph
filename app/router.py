@@ -3,6 +3,7 @@ from langchain_core.messages import AIMessage, BaseMessage
 from langgraph.graph import END
 
 
+
 def filter_out_routes(messages: List[BaseMessage]) -> List[BaseMessage]:
     """Filters out messages that are tool calls to the router.
 
@@ -20,6 +21,7 @@ def filter_out_routes(messages: List[BaseMessage]) -> List[BaseMessage]:
         filtered_messages.append(m)
     return filtered_messages
 
+
 def get_last_ai_message(messages: List[BaseMessage]) -> AIMessage:
     """Gets the last AIMessage from a list of messages.
 
@@ -34,6 +36,7 @@ def get_last_ai_message(messages: List[BaseMessage]) -> AIMessage:
             return m
     return None
 
+
 def is_tool_call(message: BaseMessage) -> bool:
     """Checks if a message is a tool call.
 
@@ -44,6 +47,7 @@ def is_tool_call(message: BaseMessage) -> bool:
         bool: True if the message is a tool call, False otherwise.
     """
     return hasattr(message, "additional_kwargs") and "tool_calls" in message.additional_kwargs
+
 
 def route(messages: List[BaseMessage], agent_names: List[str]) -> str:
     """Determines the route based on the last message in the list.

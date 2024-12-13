@@ -62,7 +62,7 @@ question_guidelines = f"""
 - Questions should be succinct, and human-like
 """
 
-num_evals: int = 30
+num_evals: int = 50
 evals_pdf: pd.DataFrame = generate_evals_df(
     docs=parsed_docs_pdf[
         :500

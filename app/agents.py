@@ -62,7 +62,7 @@ class Agent(AgentBase):
     def __init__(
         self,
         name: str,
-        description: str,
+        topics: str,
         llm: BaseChatModel,
         prompt: Optional[str] = None,
         tools: List[Tool] = [],
@@ -72,14 +72,14 @@ class Agent(AgentBase):
 
         Args:
             name (str): The name of the agent.
-            description (str): The description of the agent.
+            topics (str): The topics of the agent.
             llm (BaseChatModel): The language model to be used by the agent.
             prompt (Optional[str], optional): The prompt for the agent. Defaults to None.
             tools (List[Tool], optional): The tools to be used by the agent. Defaults to [].
             post_guard (Optional[Guard], optional): The guard to be used after execution. Defaults to None.
         """
         self.name = name
-        self.description = description
+        self.topics = topics
         self.llm = llm
         self.prompt = prompt
         self.tools = tools
@@ -124,7 +124,7 @@ class Agent(AgentBase):
 
 def create_agent(
     name: str,
-    description: str,
+    topics: str,
     llm: BaseChatModel,
     prompt: Optional[str] = None,
     tools: List[Tool] = [],
@@ -134,7 +134,7 @@ def create_agent(
 
     Args:
         name (str): The name of the agent.
-        description (str): The description of the agent.
+        topics (str): The topics of the agent.
         llm (BaseChatModel): The language model to be used by the agent.
         prompt (Optional[str], optional): The prompt for the agent. Defaults to None.
         tools (List[Tool], optional): The tools to be used by the agent. Defaults to [].
@@ -145,7 +145,7 @@ def create_agent(
     """
     return Agent(
         name=name, 
-        description=description, 
+        topics=topics, 
         llm=llm, 
         prompt=prompt, 
         tools=tools,
@@ -162,7 +162,7 @@ def create_vector_search_chain(
     columns: Optional[List[str]] = None,
     parameters: Optional[Dict[str, Any]] = None,
     name: Optional[str] = "vector_search_chain",
-    description: Optional[str] = "Answer questions about Databricks"
+    topics: Optional[str] = "process, guides, technical documentation, how-to"
 ) -> Agent:
     
     prompt_template: str = vector_search_chain_prompt()
@@ -193,7 +193,7 @@ def create_vector_search_chain(
     class _Agent(Agent):
 
         def __init__(self) -> None:
-            super().__init__(name=name, description=description, llm=llm)
+            super().__init__(name=name, topics=topics, llm=llm)
 
         def as_runnable(self) -> RunnableSequence:
             """Converts the agent to a runnable sequence.
@@ -232,15 +232,18 @@ def create_vector_search_chain(
 def create_router_agent(
     llm: BaseChatModel,
     agents: List[Agent],
+    default_agent: Optional[Agent] = None,
     name: str = "router",
-    description: str = "Responsible for classifying and routing user prompts"
+    topics: str = "Classifying and routing user prompts"
 ) -> Agent:
 
-    prompt: str = router_prompt(agents=agents)
+
     router_tool: Tool = create_router_tool(choices=agents)
+    
+    prompt: str = router_prompt(agents=agents, default_agent=default_agent)
 
     router_agent: Agent = create_agent(
-        name=name, description=description, llm=llm, prompt=prompt, tools=[router_tool]
+        name=name, topics=topics, llm=llm, prompt=prompt, tools=[router_tool]
     )
 
     return router_agent
@@ -251,7 +254,7 @@ def create_unity_catalog_agent(
     warehouse_id: str,
     functions: List[str],
     name: Optional[str] = "unity_catalog",
-    description: Optional[str] = "Answer questions using Unity Catalog tools and functions."
+    topics: Optional[str] = "Unity Catalog tools and functions."
 ) -> Agent:
     """Creates a Unity Catalog agent.
 
@@ -260,7 +263,7 @@ def create_unity_catalog_agent(
         warehouse_id (str): The warehouse ID.
         functions (List[str]): The list of functions.
         name (Optional[str], optional): The name of the agent. Defaults to "unity_catalog".
-        description (Optional[str], optional): The description of the agent. Defaults to "Answer questions using Unity Catalog tools and functions.".
+        topics (Optional[str], optional): The topics of the agent. Defaults to "Answer questions using Unity Catalog tools and functions.".
 
     Returns:
         Agent: The created Unity Catalog agent.
@@ -273,7 +276,7 @@ def create_unity_catalog_agent(
 
     unity_catalog_agent: Agent = create_agent(
         name=name,
-        description=description,
+        topics=topics,
         llm=llm,
         prompt=prompt,
         tools=unity_catalog_tools
@@ -288,7 +291,7 @@ def create_genie_agent(
     workspace_host: Optional[str] = None,
     token: Optional[str] = None,
     name: Optional[str] = "genie",
-    description: Optional[str] = "Answer questions using Databricks Genie tools."
+    topics: Optional[str] = "Databricks Genie tools."
 ) -> Agent:
     """Creates a Genie agent.
 
@@ -298,7 +301,7 @@ def create_genie_agent(
         workspace_host (Optional[str], optional): The workspace host. Defaults to None.
         token (Optional[str], optional): The token. Defaults to None.
         name (Optional[str], optional): The name of the agent. Defaults to "genie".
-        description (Optional[str], optional): The description of the agent. Defaults to "Answer questions using Databricks Genie tools.".
+        topics (Optional[str], optional): The topics of the agent. Defaults to "Answer questions using Databricks Genie tools.".
     Returns:
         Agent: The created Genie agent.
     """
@@ -311,7 +314,7 @@ def create_genie_agent(
 
     genie_agent: Agent = create_agent(
         name=name,
-        description=description,
+        topics=topics,
         llm=llm,
         prompt=prompt,
         tools=[genie_tool]
@@ -331,7 +334,7 @@ def create_vector_search_agent(
     columns: Optional[List[str]] = None,
     parameters: Optional[Dict[str, Any]] = None,
     name: Optional[str] = "vector_search",
-    description: Optional[str] = "Answer questions about Databricks"
+    topics: Optional[str] = "process, guides, technical documentation, how-to"
 ) -> Agent:
     """Creates a Vector Search agent.
 
@@ -345,7 +348,7 @@ def create_vector_search_agent(
         columns (List[str], optional): The list of columns. Defaults to None.
         parameters (Dict[str, Any], optional): The parameters. Defaults to None.
         name (Optional[str], optional): The name of the agent. Defaults to "vector_search".
-        description (Optional[str], optional): The description of the agent. Defaults to "Answer questions about Databricks".
+        topics (Optional[str], optional): The topics of the agent. Defaults to "Answer questions about Databricks".
     Returns:
         Agent: The created Vector Search agent.
     """
@@ -363,7 +366,7 @@ def create_vector_search_agent(
 
     vector_search_agent: Agent = create_agent(
         name=name,
-        description=description,
+        topics=topics,
         llm=llm,
         prompt=prompt,
         tools=[vector_search_tool]
