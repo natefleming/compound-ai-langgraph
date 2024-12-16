@@ -381,7 +381,8 @@ def create_vector_search_agent(
         topics=topics,
         llm=llm,
         prompt=prompt,
-        tools=[vector_search_tool, cited_answer_tool],
+        tools=[vector_search_tool],
+        #tools=[vector_search_tool, cited_answer_tool],
     )
 
     return vector_search_agent
