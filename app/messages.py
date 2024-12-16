@@ -4,6 +4,21 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from guardrails.guard import Guard
 from guardrails.classes.validation_outcome import ValidationOutcome
 
+
+def get_last_ai_message(messages: List[BaseMessage]) -> AIMessage:
+    """Gets the last AIMessage from a list of messages.
+
+    Args:
+        messages (List[BaseMessage]): List of messages to search.
+
+    Returns:
+        AIMessage: The last AIMessage found, or None if not found.
+    """
+    for m in messages[::-1]:
+        if isinstance(m, AIMessage):
+            return m
+    return None
+    
 def get_last_human_message(messages: List[BaseMessage]) -> HumanMessage:
     """Gets the last HumanMessage from a list of messages.
 

@@ -2,7 +2,7 @@ from typing import List
 from langchain_core.messages import AIMessage, BaseMessage
 from langgraph.graph import END
 
-
+from app.messages import get_last_ai_message
 
 def filter_out_routes(messages: List[BaseMessage]) -> List[BaseMessage]:
     """Filters out messages that are tool calls to the router.
@@ -12,7 +12,7 @@ def filter_out_routes(messages: List[BaseMessage]) -> List[BaseMessage]:
 
     Returns:
         List[BaseMessage]: Filtered list of messages.
-    """
+    """ 
     filtered_messages: List[BaseMessage] = []
     for m in messages:
         if is_tool_call(m):
@@ -21,20 +21,16 @@ def filter_out_routes(messages: List[BaseMessage]) -> List[BaseMessage]:
         filtered_messages.append(m)
     return filtered_messages
 
-
-def get_last_ai_message(messages: List[BaseMessage]) -> AIMessage:
-    """Gets the last AIMessage from a list of messages.
-
-    Args:
-        messages (List[BaseMessage]): List of messages to search.
-
-    Returns:
-        AIMessage: The last AIMessage found, or None if not found.
-    """
-    for m in messages[::-1]:
-        if isinstance(m, AIMessage):
-            return m
-    return None
+def has_function_call(message: BaseMessage, function_name: str) -> bool:
+    if not is_tool_call(message):
+        return False
+    tool_calls = message.additional_kwargs["tool_calls"]
+    for tool_call in tool_calls:
+        if "function" in tool_call:
+            name: str = tool_call["function"]["name"]
+            if name == function_name:
+                return True
+    return False
 
 
 def is_tool_call(message: BaseMessage) -> bool:
@@ -72,6 +68,11 @@ def route(messages: List[BaseMessage], agent_names: List[str]) -> str:
     last_message: AIMessage = get_last_ai_message(messages)
     if last_message is None:
         return "router"
+    
+    if last_message.name == "vector_search" and has_function_call(last_message, "CitedAnswer"):
+        return END
+
+        
     if last_message.name in agent_names:
         return last_message.name
     # if last_message.name == "vector_search":
@@ -80,5 +81,6 @@ def route(messages: List[BaseMessage], agent_names: List[str]) -> str:
     #     return "genie"
     # if last_message.name == "unity_catalog":
     #     return "unity_catalog"
-    
-    return "router"
+
+    return END
+    #return "router"

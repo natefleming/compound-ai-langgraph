@@ -111,7 +111,7 @@ genie_agent: Agent = create_genie_agent(
 
 vector_search_schema: Dict[str, str] = retriever_config.get("schema")
     
-create_vector_search_agent: Agent = create_vector_search_chain(
+vector_search_agent: Agent = create_vector_search_agent(
   llm=llm,
   endpoint_name = databricks_resources.get("vector_search_endpoint_name"),
   index_name = retriever_config.get("vector_search_index"),
@@ -128,9 +128,9 @@ create_vector_search_agent: Agent = create_vector_search_chain(
 
 builder: GraphBuilder = (
   GraphBuilder(llm=llm)
-    .add_agent(create_vector_search_agent)
+    .add_agent(vector_search_agent)
     .add_agent(genie_agent)
-    .default_agent(create_vector_search_agent)
+    .default_agent(vector_search_agent)
     .with_debug()
     #.with_memory()
 )
@@ -158,6 +158,47 @@ config: Dict[str, Any] = {
 response: Dict[str, Any] = chain.invoke(messages, config=config)
 response
 
+
+# COMMAND ----------
+
+
+
+# COMMAND ----------
+
+from pyspark.sql import DataFrame
+import pyspark.sql.functions as F
+
+
+table_name: str = retriever_config.get("source_table_name")
+content: str = retriever_config.get("schema").get("embedding_source_column")
+primary_key: str = retriever_config.get("schema").get("primary_key")
+source: str = retriever_config.get("schema").get("document_uri")
+
+def show_id(id: int) -> None:
+  source_table: DataFrame = spark.table(retriever_config.get("source_table_name"))
+
+  display(
+    source_table.select(F.col(primary_key), F.col(source), F.col(content))
+    .where(F.col(primary_key) == id)
+  )
+
+show_id(156)
+
+# COMMAND ----------
+
+from databricks.vector_search.client import VectorSearchClient, VectorSearchIndex
+
+vector_search_endpoint_name = databricks_resources.get("vector_search_endpoint_name")
+vector_search_index = retriever_config.get("vector_search_index")
+
+vsc: VectorSearchClient = VectorSearchClient()
+
+index: VectorSearchIndex = vsc.get_index(endpoint_name=vector_search_endpoint_name, index_name=vector_search_index)
+
+index.scan(last_primary_key=155, num_results=1)
+# search_results: Dict[str, Any] = (
+#     index.similarity_search(num_results=3, columns=["url", "content"], query_text=question)
+# )
 
 # COMMAND ----------
 

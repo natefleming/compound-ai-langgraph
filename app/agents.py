@@ -19,7 +19,8 @@ from app.tools import (
     create_genie_tool, 
     create_vector_search_tool, 
     create_unity_catalog_tools, 
-    create_router_tool
+    create_router_tool,
+    create_cited_answer_tool
 )
 
 from app.prompts import (
@@ -66,7 +67,8 @@ class Agent(AgentBase):
         llm: BaseChatModel,
         prompt: Optional[str] = None,
         tools: List[Tool] = [],
-        post_guard: Optional[Guard] = None
+        post_guard: Optional[Guard] = None,
+        structured_output: Optional[Tool] = None,
     ) -> None:
         """Initializes the agent.
 
@@ -83,6 +85,7 @@ class Agent(AgentBase):
         self.llm = llm
         self.prompt = prompt
         self.tools = tools
+        self.structured_output = structured_output
         self.post_guard = post_guard
         if self.post_guard is not None:
             self.post_guard.name = f"{name}-{post_guard.name}"
@@ -94,10 +97,14 @@ class Agent(AgentBase):
             RunnableSequence: The runnable sequence.
         """
 
+        llm = self.llm.bind_tools(self.tools)
+        if self.structured_output is not None:
+            llm = llm.with_structured_output(self.structured_output)
+
         chain: RunnableSequence = (
             RunnableLambda(filter_out_routes) |
             RunnableLambda(self._get_messages) |
-            self.llm.bind_tools(self.tools) |
+            llm |
             partial(add_name, name=self.name)
         )
 
@@ -128,7 +135,8 @@ def create_agent(
     llm: BaseChatModel,
     prompt: Optional[str] = None,
     tools: List[Tool] = [],
-    post_guard: Optional[Guard] = None
+    post_guard: Optional[Guard] = None,
+    structured_output: Optional[Tool] = None,
 ) -> Agent:
     """Creates an agent.
 
@@ -149,8 +157,10 @@ def create_agent(
         llm=llm, 
         prompt=prompt, 
         tools=tools,
-        post_guard=post_guard
+        post_guard=post_guard,
+        structured_output=structured_output,
     )
+
 
 def create_vector_search_chain(
     llm: BaseChatModel,
@@ -364,12 +374,14 @@ def create_vector_search_agent(
 
     prompt: str = vector_search_agent_prompt(tool_name=vector_search_tool.name)
 
+    cited_answer_tool: Tool = create_cited_answer_tool()
+
     vector_search_agent: Agent = create_agent(
         name=name,
         topics=topics,
         llm=llm,
         prompt=prompt,
-        tools=[vector_search_tool]
+        tools=[vector_search_tool, cited_answer_tool],
     )
 
     return vector_search_agent
