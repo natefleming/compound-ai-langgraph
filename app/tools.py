@@ -13,29 +13,6 @@ from databricks_langchain.genie import Genie
 from app.retrievers import create_vector_search_retriever
 
 
-# def format_cited_answers(
-#     answer: str,
-#     sources: List[str],
-#     citations: List[int],
-# ) -> str:
-#     """
-#     Formats the answer, source IDs, and sources in markdown and returns the string.
-#     The IDs and source locations are formatted in a markdown table.
-#     """
-#     from textwrap import dedent
-
-#     # Start with the answer section
-#     md_output = f"## Answer {answer}\n\n"
-
-#     # Add the sources table
-#     md_output += "| Citation | Source |\n"
-#     md_output += "|----|--------|\n"
-
-#     for source, citation in zip(sources, citations):
-#         md_output += f"| {citation} | {source} |\n"
-
-#     return md_output
-
 def create_cited_answer_tool() -> Tool:
     
     class CitedAnswer(BaseModel):
@@ -57,14 +34,6 @@ def create_cited_answer_tool() -> Tool:
             description="The numeric IDs of the SPECIFIC sources which justify the answer.",
         )
 
-    # tool = StructuredTool.from_function(
-    #     func=format_cited_answers,
-    #     name="format_cited_answer",
-    #     description="formats a cited answer",
-    #     args_schema=CitedAnswer,
-    #     return_direct=True,
-    #     # coroutine= ... <- you can specify an async method if desired as well
-    # )
     return CitedAnswer
     
 
