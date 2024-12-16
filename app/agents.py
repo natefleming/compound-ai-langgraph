@@ -229,6 +229,12 @@ def create_vector_search_chain(
     return agent
 
 
+from typing import List, Optional
+from pydantic import Field
+import dspy
+from typing import Literal
+
+    
 def create_router_agent(
     llm: BaseChatModel,
     agents: List[Agent],
@@ -236,17 +242,76 @@ def create_router_agent(
     name: str = "router",
     topics: str = "Classifying and routing user prompts"
 ) -> Agent:
+ 
+    dspy.configure(lm=dspy.LM(f"databricks/{llm.endpoint}"))
 
+    class Router(dspy.Signature):
+        """Route user queries to the appropriate agent based on descriptions."""
 
-    router_tool: Tool = create_router_tool(choices=agents)
+        query: str = dspy.InputField(desc="The user query.")
+        agents_descriptions: str = dspy.InputField(desc="The descriptions of the agents.")
+        default_agent: str = dspy.InputField(desc="The default agent.")
+        agent_name: str = dspy.OutputField(desc="The name of the agent that was selected.")
+        reasoning: str = dspy.OutputField(desc="The reasoning behind the selected agent.")
+        confidence: float = dspy.OutputField(desc="The confidence of the selected agent.")   
+
+    agents_descriptions = "\n".join([f"{agent.name}: {agent.topics}" for agent in agents])
+    default_agent: str = default_agent.name if default_agent is not None else None
+
+    # Create the router prediction function
+    def router_predict(query: str):
+        router = dspy.Predict(Router)
+        result = router(query=query, agents_descriptions=agents_descriptions, default_agent=default_agent)
+        return result
     
-    prompt: str = router_prompt(agents=agents, default_agent=default_agent)
+    class _Agent(Agent):
 
-    router_agent: Agent = create_agent(
-        name=name, topics=topics, llm=llm, prompt=prompt, tools=[router_tool]
-    )
+        def __init__(self) -> None:
+            super().__init__(name=name, topics=topics, llm=llm)
 
-    return router_agent
+        def as_runnable(self) -> RunnableSequence:
+            def run_dspy(messages: List[BaseMessage]) -> BaseMessage:
+                message: HumanMessage = get_last_human_message(messages)
+                if not message:
+                    raise ValueError("No Human Message found in messages")
+
+                question: str = message.content
+                result = router_predict(question)
+                agent_name: str = result.agent_name
+                return AIMessage(content=agent_name)
+            
+            chain: RunnableSequence = (
+                RunnableLambda(filter_out_routes) |
+                RunnableLambda(run_dspy) |
+                partial(add_name, name=self.name)
+            )
+            return chain
+         
+
+    agent: Agent = _Agent()
+
+    return agent
+
+
+
+# def create_router_agent(
+#     llm: BaseChatModel,
+#     agents: List[Agent],
+#     default_agent: Optional[Agent] = None,
+#     name: str = "router",
+#     topics: str = "Classifying and routing user prompts"
+# ) -> Agent:
+
+
+#     router_tool: Tool = create_router_tool(choices=agents)
+    
+#     prompt: str = router_prompt(agents=agents, default_agent=default_agent)
+
+#     router_agent: Agent = create_agent(
+#         name=name, topics=topics, llm=llm, prompt=prompt, tools=[router_tool]
+#     )
+
+#     return router_agent
 
         
 def create_unity_catalog_agent(

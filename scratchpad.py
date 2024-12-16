@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %pip install --upgrade langchain mlflow 
-# MAGIC %pip install langgraph langchain-openai databricks-langchain langchain-community databricks-vectorsearch databricks-sdk python-dotenv guardrails-ai presidio-analyzer nltk
+# MAGIC %pip install langgraph langchain-openai databricks-langchain langchain-community databricks-vectorsearch databricks-sdk python-dotenv guardrails-ai presidio-analyzer dspy nltk
 # MAGIC %restart_python
 
 # COMMAND ----------
@@ -26,6 +26,7 @@ pip_requirements: List[str] = [
   f"guardrails-ai=={version('guardrails-ai')}",
   f"nltk=={version('nltk')}",
   f"presidio-analyzer=={version('presidio-analyzer')}",
+  f"dspy=={version('dspy')}",
 ]
 print("\n".join(pip_requirements))
 
