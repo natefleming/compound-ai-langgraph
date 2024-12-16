@@ -152,6 +152,7 @@ def create_agent(
         post_guard=post_guard
     )
 
+
 def create_vector_search_chain(
     llm: BaseChatModel,
     endpoint_name: str,
@@ -196,11 +197,6 @@ def create_vector_search_chain(
             super().__init__(name=name, description=description, llm=llm)
 
         def as_runnable(self) -> RunnableSequence:
-            """Converts the agent to a runnable sequence.
-
-            Returns:
-                RunnableSequence: The runnable sequence.
-            """
 
             def run_qa_chain(messages: List[BaseMessage]) -> BaseMessage:
                 message: HumanMessage = get_last_human_message(messages)

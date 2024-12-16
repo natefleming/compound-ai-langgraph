@@ -145,7 +145,16 @@ mlflow.models.set_model(chain)
 
 # COMMAND ----------
 
+from langchain_core.messages import HumanMessage
+
 mlflow.langchain.autolog(disable=False)
+
+message: str = "How do I add a fund raiser key?"
+messages: List[HumanMessage] = [HumanMessage(content=message)]
+config: Dict[str, Any] = {
+    "configurable": {"thread_id": 42}
+}
+
 create_vector_search_chain.as_runnable().invoke(messages)
 
 # COMMAND ----------

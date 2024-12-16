@@ -35,14 +35,14 @@ def vector_search_agent_prompt(tool_name: str) -> str:
     return prompt
 
 def vector_search_chain_prompt() -> str:
-    """Generates a prompt for assisting users with Databricks Documentation queries.
+    """Generates a prompt for assisting users with vector search.
 
     Returns:
         str: The generated prompt.
     """
     prompt: str = dedent("""
-        Your job is to help a user find information from Databricks Documentation.
-    
+        Your job is to help a user find information from using a vector search.
+               
         Summaries: 
         {summaries}
 
@@ -50,6 +50,7 @@ def vector_search_chain_prompt() -> str:
         {question}
 
         Answer:
+        
     """).strip()
     return prompt
 
