@@ -59,7 +59,11 @@ question_guidelines = f"""
 - How can I submit a referral bonus?
 
 # Additional Guidelines
-- Questions should be succinct, and human-like
+- Questions should be succinct and human-like
+- Questions should not contain any sensitive information
+- Only use questions that are relevant to the domain
+- Omit questions that are too broad or vague
+- Omit questions that do not have a clear answer
 """
 
 num_evals: int = 50
@@ -76,3 +80,7 @@ evals_df: DataFrame = spark.createDataFrame(evals_pdf)
 
 evals_df.write.mode("overwrite").saveAsTable(evaluation_table_name)
 
+
+# COMMAND ----------
+
+display(spark.table(evaluation_table_name))

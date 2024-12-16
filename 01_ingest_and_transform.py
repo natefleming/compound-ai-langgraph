@@ -9,7 +9,13 @@
 
 # COMMAND ----------
 
-spark.conf.set("spark.sql.shuffle.partitions", 8)
+import multiprocessing
+
+num_cores: int = multiprocessing.cpu_count()
+
+print(num_cores)
+
+spark.conf.set("spark.sql.shuffle.partitions", num_cores)
 
 
 # COMMAND ----------
@@ -106,7 +112,6 @@ spark.sql(f"USE {catalog.name}.{database_name}")
 
 from pathlib import Path
 
-#prgsupportdocuments.default.pandakb
 
 raw_documents_path: Path = Path(source_path) #volume.as_path() / "sample_documents"
 raw_checkpoint_path: Path = volume.as_path() / "checkpoints/raw_docs"
@@ -120,13 +125,13 @@ print(f"{raw_checkpoint_path.as_posix()=}")
 
 # COMMAND ----------
 
-spark.sql(f"""
-   DROP TABLE IF EXISTS {catalog_name}.{database_name}.raw_docs
-""")
+# spark.sql(f"""
+#    DROP TABLE IF EXISTS {catalog_name}.{database_name}.raw_docs
+# """)
 
 # COMMAND ----------
 
-# MAGIC %sh rm -rf /Volumes/dbcks_poc/paws/data/checkpoints/raw_docs
+#%sh rm -rf /Volumes/dbcks_poc/paws/data/checkpoints/raw_docs
 
 # COMMAND ----------
 
@@ -162,6 +167,8 @@ display(spark.table(f"{catalog_name}.{database_name}.raw_docs"))
 from typing import Iterator
 
 from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.constants import DEFAULT_CHUNK_SIZE
+from llama_index.core.node_parser.text.sentence import SENTENCE_CHUNK_OVERLAP
 from llama_index.core import Document, set_global_tokenizer
 
 from transformers import AutoTokenizer
@@ -176,23 +183,24 @@ from app.udf import parse_bytes
 spark.conf.set("spark.sql.execution.arrow.maxRecordsPerBatch", 10)
 
 @F.pandas_udf("array<string>")
-def read_as_chunk(batch_iter: Iterator[pd.Series]) -> Iterator[pd.Series]:
-    # set llama2 as tokenizer to match our model size (will stay below gte 1024 limit)
+def read_as_chunk(df: pd.DataFrame) -> pd.Series:
+    # set llama2 as tokenizer to match our model size
     set_global_tokenizer(
         AutoTokenizer.from_pretrained("hf-internal-testing/llama-tokenizer")
     )
-    # Sentence splitter from llama_index to split on sentences
-    splitter = SentenceSplitter(chunk_size=500, chunk_overlap=10)
-
-    def extract_and_split(b):
-        txt = parse_bytes(b)
+    # Sentence splitter from llama_index 
+    splitter = SentenceSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=SENTENCE_CHUNK_OVERLAP)
+    
+    def extract_and_split(row):
+        txt = parse_bytes(row['content'], name=row['path'])
         if txt is None:
             return []
         nodes = splitter.get_nodes_from_documents([Document(text=txt)])
         return [n.text for n in nodes]
 
-    for x in batch_iter:
-        yield x.apply(extract_and_split)
+    return df.apply(extract_and_split, axis=1)
+
+
 
 # COMMAND ----------
 
@@ -254,13 +262,13 @@ raw_ppt_docs_df: DataFrame = spark.read.table("raw_docs").filter("mime_type = 'a
 
 # COMMAND ----------
 
-raw_word_docs_df.count()
+display(raw_word_docs_df)
 
 # COMMAND ----------
 
 df = (
-    raw_docs_df
-    .withColumn("content", F.explode(read_as_chunk("content")))
+    raw_word_docs_df
+    .withColumn("content", F.explode(read_as_chunk(F.struct("content", "path"))))
     .selectExpr(f"path as {document_uri}", "content")
 )
 
@@ -275,7 +283,7 @@ document_uri: str = "source"
 
 (
     spark.readStream.table("raw_docs")
-        .withColumn("content", F.explode(read_as_chunk("content")))
+        .withColumn("content", F.explode(read_as_chunk(F.struct("content", "path"))))
         .selectExpr(f"path as {document_uri}", "content")
         .writeStream.trigger(availableNow=True)
         .option("maxFilesPerTrigger", 5)

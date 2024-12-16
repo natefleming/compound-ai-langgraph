@@ -25,14 +25,17 @@ def get_llm(
         case "llama":
             llm: BaseChatModel = ChatDatabricks(
                 endpoint="databricks-meta-llama-3-1-70b-instruct",
+                temperature=0.1,
             )
         case "openai":
             llm: BaseChatModel = ChatOpenAI(
                 model="gpt-4o",
+                temperature=0.1,
             )
         case _:
             llm: BaseChatModel = ChatDatabricks(
                 endpoint=model_name,
+                temperature=0.1,
             )
 
     return llm

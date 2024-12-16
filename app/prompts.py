@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from textwrap import dedent
 
 from langchain.tools import Tool
@@ -29,7 +29,8 @@ def vector_search_agent_prompt(tool_name: str) -> str:
         You have access to `{tool_name}` to answer the question.
         You MUST ALWAYS use the tools provided. 
         NEVER add additional information which did not come from tools.
-        ALWAYS call the tool `{tool_name}` EXACTLY ONCE.
+        Your answer should include enough information to conclusively answer the question.
+        You may call `{tool_name}` tools many times to acquire more information.
         If you are unable to help the user, you can say so.
     """).strip()
     return prompt
@@ -42,8 +43,9 @@ def vector_search_chain_prompt() -> str:
     """
     prompt: str = dedent("""
         Your job is to help a user find technical information about processes, guides and troubleshooting.
-        You MUST only use the context provided in the prompt to answer the question.
+        You MUST ONLY use the context provided in the prompt to answer the question.
         NEVER add additional information which did not come from tools.
+        Your answer should include enough information to conclusively answer the question.
         If you are unable to find the answer, you can say so.
     
         Summaries: 
@@ -54,7 +56,6 @@ def vector_search_chain_prompt() -> str:
 
         Answer:
 
-        Source Documents:
     """).strip()
     return prompt
 

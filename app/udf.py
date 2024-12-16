@@ -57,10 +57,10 @@ def document_converter() -> DocumentConverter:
 converter: DocumentConverter = document_converter()
 
 
-def parse_bytes(raw_doc_contents_bytes: bytes) -> str:
+def parse_bytes(raw_doc_contents_bytes: bytes, name: str) -> str:
     try:
       stream: BytesIO = BytesIO(raw_doc_contents_bytes)
-      document_stream: DocumentStream = DocumentStream(name="foo", stream=stream)
+      document_stream: DocumentStream = DocumentStream(name=name, stream=stream)
       result: ConversionResult = converter.convert(document_stream)
       document: DoclingDocument = result.document
       markdown: str = document.export_to_markdown()
