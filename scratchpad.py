@@ -182,7 +182,7 @@ def show_id(id: int) -> None:
     .where(F.col(primary_key) == id)
   )
 
-show_id(156)
+show_id(4)
 
 # COMMAND ----------
 

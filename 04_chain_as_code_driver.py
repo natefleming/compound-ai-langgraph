@@ -171,7 +171,7 @@ model_info: mlflow.models.model.ModelInfo
 evaluation_result: EvaluationResult
 
 model_info, evaluation_result = (
-  log_and_evaluate_agent(run_name="chain", model_config=model_config)
+  log_and_evaluate_agent(run_name="chain", model_config=model_config, should_evaluate=False)
 )
 
 
@@ -207,7 +207,7 @@ payload: Dict[str, str] = {
     "messages": [
         {
             "role": "user",
-            "content": "How can I add a fundraiser key?",
+            "content": "How to find user guides on WorkJam?",
             #"content": "How can we optimize clusters in Databricks?",
         }
     ]

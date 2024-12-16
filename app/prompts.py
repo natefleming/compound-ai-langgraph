@@ -30,17 +30,17 @@ def vector_search_agent_prompt(tool_name: str) -> str:
         You MUST ALWAYS use the tools provided. 
         NEVER add additional information which did not come from tools.
         Your answer should include enough information to conclusively answer the question.
+        You MUST ALWAYS USE `{tool_name}` FIRST.
         You may call `{tool_name}` tools many times to acquire more information.
-        Use `format_cited_answers` to extract the final response. 
+     
         Respond in Markdown format
-
         If there answer has list YOU MUST use Markdown Numbers or Bullets. Each step on a new line.
         Citations and Sources should ALWAYS table with columns `Citation` and `Source`
         If you are unable to help the user, you can say so.
 
         Examples Result:
 
-        This is the answer to the question.
+        Here are the step to fix the error:
 
         1. Step 1
         2. Step 2
@@ -50,7 +50,7 @@ def vector_search_agent_prompt(tool_name: str) -> str:
         | 123      | /path/to/file1.pdf |
         | 456      | /path/to/file2.pdf |
 
-         
+
     """).strip()
     return prompt
 
