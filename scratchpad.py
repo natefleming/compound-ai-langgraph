@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %pip install --upgrade langchain mlflow 
-# MAGIC %pip install langgraph langchain-openai databricks-langchain langchain-community databricks-vectorsearch databricks-sdk python-dotenv guardrails-ai presidio-analyzer nltk
+# MAGIC %pip install langgraph langchain-openai databricks-langchain langchain-community databricks-vectorsearch databricks-sdk python-dotenv #guardrails-ai presidio-analyzer nltk
 # MAGIC %restart_python
 
 # COMMAND ----------
@@ -23,9 +23,9 @@ pip_requirements: List[str] = [
   f"langgraph=={version('langgraph')}",
   f"databricks_sdk=={version('databricks_sdk')}",
   f"databricks_vectorsearch=={version('databricks_vectorsearch')}",
-  f"guardrails-ai=={version('guardrails-ai')}",
-  f"nltk=={version('nltk')}",
-  f"presidio-analyzer=={version('presidio-analyzer')}",
+  # f"guardrails-ai=={version('guardrails-ai')}",
+  # f"nltk=={version('nltk')}",
+  # f"presidio-analyzer=={version('presidio-analyzer')}",
 ]
 print("\n".join(pip_requirements))
 
@@ -143,13 +143,17 @@ mlflow.models.set_model(chain)
 
 # COMMAND ----------
 
+graph.display()
+
+# COMMAND ----------
+
 from typing import List
 
 from langchain_core.messages import HumanMessage
 
 mlflow.langchain.autolog(disable=False)
 
-message: str = "How do I add a fund raiser key?"
+message: str = "Where can I order a printer for receipts?"
 messages: List[HumanMessage] = [HumanMessage(content=message)]
 config: Dict[str, Any] = {
     "configurable": {"thread_id": 42}
@@ -157,10 +161,6 @@ config: Dict[str, Any] = {
 
 response: Dict[str, Any] = chain.invoke(messages, config=config)
 response
-
-
-# COMMAND ----------
-
 
 
 # COMMAND ----------
@@ -182,7 +182,7 @@ def show_id(id: int) -> None:
     .where(F.col(primary_key) == id)
   )
 
-show_id(4)
+show_id(496)
 
 # COMMAND ----------
 
@@ -309,3 +309,22 @@ config: Dict[str, Any] = {
 response: Dict[str, Any] = chain.invoke(messages, config=config)
 response
 
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC
+# MAGIC select count(1) from dbcks_poc.paws.documents_chunked
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select count(distinct source) from dbcks_poc.paws.documents_chunked
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC
+# MAGIC SELECT SUM(OCTET_LENGTH(content)) / (1024 * 1024 * 1024) AS size_in_gb
+# MAGIC FROM dbcks_poc.paws.documents_chunked
+# MAGIC

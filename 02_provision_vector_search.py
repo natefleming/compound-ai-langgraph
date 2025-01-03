@@ -21,6 +21,10 @@ api_token: str = context.apiToken().get()
 
 # COMMAND ----------
 
+workspace_url
+
+# COMMAND ----------
+
 from typing import Any, Dict, Optional
 
 from mlflow.models import ModelConfig
@@ -154,20 +158,24 @@ from databricks.vector_search.index import VectorSearchIndex
 
 
 workspace_url: str = os.environ.get("DATABRICKS_HOST")
-client_id: str = os.environ.get("DATARBRICKS_CLIENT_ID")
-client_secret: str = os.environ.get("DATARBRICKS_CLIENT_SECRET")
+# client_id: str = os.environ.get("DATARBRICKS_CLIENT_ID")
+# client_secret: str = os.environ.get("DATARBRICKS_CLIENT_SECRET")
 personal_access_token: str = os.environ.get("DATARBRICKS_TOKEN")
 
-# vsc: VectorSearchClient = VectorSearchClient(
-#     workspace_url=workspace_url,
-#     service_principal_client_id=client_id,
-#     service_principal_client_secret=client_secret
-# )
+
+client_id = dbutils.secrets.get("dbcks_poc", "client_id")
+client_secret = dbutils.secrets.get("dbcks_poc", "client_secret")
 
 vsc: VectorSearchClient = VectorSearchClient(
     workspace_url=workspace_url,
-    personal_access_token=os.environ.get("DATABRICKS_TOKEN")
+    service_principal_client_id=client_id,
+    service_principal_client_secret=client_secret
 )
+
+# vsc: VectorSearchClient = VectorSearchClient(
+#     workspace_url=workspace_url,
+#     personal_access_token=os.environ.get("DATABRICKS_TOKEN")
+# )
 
 index: VectorSearchIndex = vsc.get_index(endpoint_name=vector_search_endpoint_name, index_name=vector_search_index)
 
@@ -177,3 +185,7 @@ search_results: Dict[str, Any] = (
 
 search_results
                 
+
+# COMMAND ----------
+
+print(workspace_url)

@@ -1,5 +1,5 @@
 # Databricks notebook source
-# MAGIC %pip install --quiet --upgrade langchain langgraph langchain-openai databricks-langchain langchain-community mlflow databricks-sdk databricks-vectorsearch databricks-agents python-dotenv guardrails-ai presidio-analyzer nltk
+# MAGIC %pip install --quiet --upgrade langchain langgraph langchain-openai databricks-langchain langchain-community mlflow databricks-sdk databricks-vectorsearch databricks-agents python-dotenv #guardrails-ai presidio-analyzer nltk
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -22,9 +22,9 @@ pip_requirements: List[str] = [
   f"langgraph=={version('langgraph')}",
   f"databricks_sdk=={version('databricks_sdk')}",
   f"databricks_vectorsearch=={version('databricks_vectorsearch')}",
-  f"guardrails-ai=={version('guardrails-ai')}",
-  f"nltk=={version('nltk')}",
-  f"presidio-analyzer=={version('presidio-analyzer')}",
+  # f"guardrails-ai=={version('guardrails-ai')}",
+  # f"nltk=={version('nltk')}",
+  # f"presidio-analyzer=={version('presidio-analyzer')}",
 ]
 pip_requirements = [f"\"{p}\"," for p in pip_requirements]
 print("\n".join(pip_requirements))
@@ -37,21 +37,6 @@ _ = load_dotenv(find_dotenv())
 
 # COMMAND ----------
 
-import os 
-from mlflow.utils.databricks_utils import get_databricks_host_creds
-
-workspace_host: str = spark.conf.get("spark.databricks.workspaceUrl")
-base_url: str = f"{workspace_host}/serving-endpoints/"
-token: str = get_databricks_host_creds().token
-
-os.environ["DATABRICKS_HOST"] = f"https://{workspace_host}"
-os.environ["DATABRICKS_TOKEN"] = token
-
-print(f"workspace_host: {workspace_host}")
-print(f"base_url: {base_url}")
-
-# COMMAND ----------
-
 import app.llms
 import app.graph
 import app.messages
@@ -61,8 +46,8 @@ import app.router
 import app.retrievers
 import app.tools
 import app.catalog
-import app.guardrails.validators
-import app.guardrails.guards
+# import app.guardrails.validators
+# import app.guardrails.guards
 
 # COMMAND ----------
 
@@ -75,14 +60,37 @@ model_config: ModelConfig = ModelConfig(development_config=model_config_file)
 databricks_resources: Dict[str, Any] = model_config.get("databricks_resources")
 registered_model_name: str = databricks_resources.get("registered_model_name")
 evaluation_table_name: str = databricks_resources.get("evaluation_table_name")
+curated_evaluation_table_name: str = databricks_resources.get("curated_evaluation_table_name")
 
 secret_scope: str = databricks_resources.get("scope_name")
 secret_name: str = databricks_resources.get("secret_name")
+client_id: str = databricks_resources.get("client_id")
+client_secret: str = databricks_resources.get("client_secret")
 
 print(f"{registered_model_name=}") 
 print(f"{evaluation_table_name=}")
+print(f"{curated_evaluation_table_name=}")
 print(f"{secret_scope=}")
 print(f"{secret_name=}")
+print(f"{client_id=}")
+print(f"{client_secret=}")
+
+# COMMAND ----------
+
+import os 
+from mlflow.utils.databricks_utils import get_databricks_host_creds
+
+workspace_host: str = spark.conf.get("spark.databricks.workspaceUrl")
+base_url: str = f"{workspace_host}/serving-endpoints/"
+#token: str = get_databricks_host_creds().token
+
+os.environ["DATABRICKS_HOST"] = f"https://{workspace_host}"
+os.environ["DATABRICKS_TOKEN"] =  dbutils.secrets.get(secret_scope, secret_name) #or token
+#os.environ["DATABRICKS_CLIENT_ID"] = dbutils.secrets.get(secret_scope, client_id)
+#os.environ["DATABRICKS_CLIENT_SECRET"] = dbutils.secrets.get(secret_scope, client_secret)
+
+print(f"workspace_host: {workspace_host}")
+print(f"base_url: {base_url}")
 
 # COMMAND ----------
 
@@ -108,19 +116,12 @@ mlflow.set_registry_uri("databricks-uc")
 signature: ModelSignature = ModelSignature(
     inputs=ChatCompletionRequest(),
     outputs=ChatCompletionResponse(),
-    # params=ParamSchema([
-    #     ParamSpec("temperature", DataType.float, 0.1, None),
-    #     ParamSpec("max_tokens", DataType.integer, 1000, None),
-    #     ParamSpec("thread_id", DataType.integer, 42, None),
-    # ])
 )
-
-evalution_pdf: pd.DataFrame = spark.table(evaluation_table_name).toPandas()
 
 def log_and_evaluate_agent(
     run_name: str, 
     model_config: Union[ModelConfig, Dict[str, Any]], 
-    should_evaluate: bool = True
+    eval_df: Optional[pd.DataFrame] = None,
 ) -> Tuple[ModelInfo, EvaluationResult]:
 
     if isinstance(model_config, ModelConfig):
@@ -138,24 +139,25 @@ def log_and_evaluate_agent(
             example_no_conversion=True,
             pip_requirements=[
                 "mlflow==2.19.0",
-                "langchain==0.3.11",
-                "langchain_openai==0.2.12",
-                "databricks_langchain==0.0.3",
-                "langchain_community==0.3.11",
-                "langgraph==0.2.58",
-                "databricks_sdk==0.39.0",
-                "databricks_vectorsearch==0.40",
-                "guardrails-ai==0.6.1",
-                "nltk==3.9.1",
-                "presidio-analyzer==2.2.355",
+                "langchain==0.3.13",
+                "langchain_openai==0.2.13",
+                "databricks_langchain==0.1.1",
+                "langchain_community==0.3.13",
+                "langgraph==0.2.60",
+                "databricks_sdk==0.40.0",
+                "databricks_vectorsearch==0.43",
+                # "guardrails-ai==0.6.1",
+                # "nltk==3.9.1",
+                # "presidio-analyzer==2.2.356",
             ],
         )
+
         print(model_info.registered_model_version)
 
         eval_results: Optional[EvaluationResult] = None
-        if should_evaluate:
+        if eval_df is not None:
             eval_results = mlflow.evaluate(
-                data=evalution_pdf,             # Your evaluation set
+                data=eval_df,             # Your evaluation set
                 model=model_info.model_uri,     # Logged agent from above
                 model_type="databricks-agent",  # activate Mosaic AI Agent Evaluation
             )
@@ -170,8 +172,12 @@ from mlflow.models.evaluation import EvaluationResult
 model_info: mlflow.models.model.ModelInfo
 evaluation_result: EvaluationResult
 
+evalution_pdf: pd.DataFrame = spark.table(evaluation_table_name).toPandas()
+currated_evaluation_pdf: pd.DataFrame = spark.table(curated_evaluation_table_name).toPandas()
+currated_evaluation_pdf = None
+
 model_info, evaluation_result = (
-  log_and_evaluate_agent(run_name="chain", model_config=model_config, should_evaluate=True)
+  log_and_evaluate_agent(run_name="chain", model_config=model_config, eval_df=currated_evaluation_pdf)
 )
 
 
@@ -207,7 +213,7 @@ payload: Dict[str, str] = {
     "messages": [
         {
             "role": "user",
-            "content": "How can I verify if I have completed the survey?",
+            "content": "Where can I order a printer for receipts?",
             #"content": "How can we optimize clusters in Databricks?",
         }
     ]
@@ -240,11 +246,12 @@ w: WorkspaceClient = WorkspaceClient()
 deployment: Deployment = deploy(
     registered_model_name, 
     latest_model_version,
+    scale_to_zero=True,
     environment_vars={
-        "DATABRICKS_TOKEN": f"{{secrets/{secret_scope}/{secret_name}}}", 
+        #"DATABRICKS_TOKEN": f"{{secrets/{secret_scope}/{secret_name}}}", 
         #"DATABRICKS_HOST": f"{{secrets/{scope}/databricks_host}}", 
         "DATABRICKS_HOST": os.environ["DATABRICKS_HOST"], 
-        #"DATABRICKS_TOKEN": os.environ["DATABRICKS_TOKEN"], 
+        "DATABRICKS_TOKEN": os.environ["DATABRICKS_TOKEN"], 
     }
 )
 

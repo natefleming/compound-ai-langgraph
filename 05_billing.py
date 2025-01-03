@@ -7,7 +7,7 @@
 # MAGIC %sql
 # MAGIC SELECT SUM(usage_quantity) as dbus 
 # MAGIC from system.billing.usage 
-# MAGIC where billing_origin_product = 'MODEL_SERVING' and usage_metadata.endpoint_name = 'agents_pandas_poc-paws-compound_ai_langgraph'
+# MAGIC where billing_origin_product = 'MODEL_SERVING' and usage_metadata.endpoint_name = 'agents_dbcks_poc-paws-compound_ai_langgraph'
 
 # COMMAND ----------
 

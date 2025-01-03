@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from langchain_core.vectorstores.base import VectorStoreRetriever
 from langchain.tools import Tool, tool
 from langchain_core.tools import StructuredTool
-from langchain_databricks.vectorstores import DatabricksVectorSearch
+from langchain_community.vectorstores import DatabricksVectorSearch
 from langchain_community.tools.databricks import UCFunctionToolkit
 
 from databricks_langchain.genie import Genie

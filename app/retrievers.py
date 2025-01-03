@@ -2,7 +2,7 @@
 from typing import Any, Dict, List, Optional
 
 from langchain_core.vectorstores.base import VectorStoreRetriever
-from langchain_databricks.vectorstores import DatabricksVectorSearch
+from databricks_langchain.vectorstores import DatabricksVectorSearch
 
 import mlflow.models
 

@@ -1,5 +1,5 @@
 # Databricks notebook source
-# MAGIC %pip install -U -qqqq databricks-agents mlflow databricks-sdk[openai] backoff
+# MAGIC %pip install -U -qqqq databricks-agents mlflow databricks-sdk[openai] backoff openpyxl
 # MAGIC
 # MAGIC dbutils.library.restartPython()
 
@@ -22,9 +22,11 @@ databricks_resources: Dict[str, Any] = model_config.get("databricks_resources")
 retriever_config: Dict[str, Any] = model_config.get("retriever_config")
 
 evaluation_table_name: str = databricks_resources.get("evaluation_table_name")
+curated_evaluation_table_name: str = databricks_resources.get("curated_evaluation_table_name")
 source_table_name: str = retriever_config.get("source_table_name")
 
 print(f"{evaluation_table_name=}")
+print(f"{curated_evaluation_table_name=}")
 print(f"{source_table_name=}")
 
 
@@ -66,7 +68,7 @@ question_guidelines = f"""
 - Omit questions that do not have a clear answer
 """
 
-num_evals: int = 50
+num_evals: int = 20
 evals_pdf: pd.DataFrame = generate_evals_df(
     docs=parsed_docs_pdf[
         :500
@@ -84,3 +86,128 @@ evals_df.write.mode("overwrite").saveAsTable(evaluation_table_name)
 # COMMAND ----------
 
 display(spark.table(evaluation_table_name))
+
+# COMMAND ----------
+
+from pyspark.sql import DataFrame
+import pyspark.sql.functions as F
+
+evaluation_df: DataFrame = spark.table(evaluation_table_name)
+messages_df: DataFrame = evaluation_df.select("request_id", F.explode("request.messages").alias("messages"))
+questions_df: DataFrame = messages_df.select("request_id", "messages.content")
+
+display(questions_df)
+
+# COMMAND ----------
+
+questions_df = (
+    questions_df.where(
+        (questions_df.content.isNull()) | 
+        (F.length(questions_df.content) <= 20)
+    )
+)
+display(questions_df)
+
+# COMMAND ----------
+
+invalid_question_ids = [r.request_id for r in questions_df.select("request_id").distinct().collect()]
+(
+    spark.table(evaluation_table_name)
+    .where(~F.col("request_id").isin(invalid_question_ids))
+    .write
+    .mode("overwrite")
+    .saveAsTable(evaluation_table_name)
+)
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC
+# MAGIC ### Create Dataset from KB FAQ and Expected Answers
+
+# COMMAND ----------
+
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.service.files import DirectoryEntry
+
+from pyspark.sql import DataFrame
+import pandas as pd
+
+w: WorkspaceClient = WorkspaceClient()
+
+
+evaluation_path: str = "/Volumes/dbcks_poc/paws/data/evaluation"
+
+evaluation_pdf: pd.DataFrame = pd.DataFrame()
+
+for entry in w.files.list_directory_contents(evaluation_path):
+    entry: DirectoryEntry
+    path: str = entry.path
+    if path.endswith(".xlsx"):
+        evaluation_pdf = pd.concat([evaluation_pdf, pd.read_excel(path)], ignore_index=True)
+
+evaluation_df: DataFrame = spark.createDataFrame(evaluation_pdf)
+
+display(evaluation_df)
+
+# COMMAND ----------
+
+from typing import Dict, List
+
+import pyspark.sql.functions as F
+import pyspark.sql.types as T
+
+# ChatMessageSchema: T.StructType = T.StructType([
+#     T.StructField("role", T.StringType(), False),
+#     T.StructField("content", T.StringType(), False),
+# ])
+
+# ChatCompletionSchema = T.StructType([
+#     T.StructField("messages", T.ArrayType(ChatMessageSchema), False),
+# ])
+
+
+# @F.udf(returnType=ChatCompletionSchema)
+# def as_chat_completion(question: str) -> ChatCompletionSchema:
+#     messages = {
+#         "messages": [
+#             {
+#                 "role": "user",
+#                 "content": question
+#             },
+#         ]
+#     }
+#     return messages
+
+
+# chat_completion_df: DataFrame = (
+#     evaluation_df.withColumns(
+#         { 
+#          "request_id" : F.expr("uuid()"),
+#          "request": as_chat_completion(F.col("Question")) 
+#         }
+#     )
+# )
+
+
+ExpectedRetrievedContextSchema = T.ArrayType(
+    T.StructType([
+        T.StructField("content", T.StringType(), False),
+        T.StructField("doc_uri", T.StringType(), False),
+    ])
+)
+
+chat_completion_df: DataFrame = (
+    evaluation_df.withColumns(
+        {
+            "request_id": F.expr("uuid()"),
+            "request": F.col("Question"),
+            "expected_response": F.col("Expected Answer"),
+            "expected_retrieved_context": F.lit([]).cast(ExpectedRetrievedContextSchema),
+        }
+    ).select("request_id", "request", "expected_response", "expected_retrieved_context")
+)
+display(chat_completion_df)
+
+chat_completion_df.write.mode("overwrite").option("overwriteSchema", True).saveAsTable(curated_evaluation_table_name)

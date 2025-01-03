@@ -71,8 +71,8 @@ def route(messages: List[BaseMessage], agent_names: List[str]) -> str:
     
     # This keeps the vector search agent from recursively calling itself.
     # Check to see if vector_search has already used Cited Answer to format a result.
-    if last_message.name == "vector_search" and has_function_call(last_message, "CitedAnswer"):
-        return END
+    #if last_message.name == "vector_search" and has_function_call(last_message, "CitedAnswer"):
+    #    return END
 
         
     if last_message.name in agent_names:

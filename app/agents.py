@@ -11,7 +11,7 @@ from langchain.chains import RetrievalQAWithSourcesChain, RetrievalQA
 from langchain.prompts import PromptTemplate
 from langchain.tools import Tool
 
-from guardrails.guard import Guard
+#from guardrails.guard import Guard
 
 from app.router import filter_out_routes
 from app.messages import add_name, get_last_human_message
@@ -67,7 +67,7 @@ class Agent(AgentBase):
         llm: BaseChatModel,
         prompt: Optional[str] = None,
         tools: List[Tool] = [],
-        post_guard: Optional[Guard] = None,
+        #post_guard: Optional[Guard] = None,
         structured_output: Optional[Tool] = None,
     ) -> None:
         """Initializes the agent.
@@ -86,9 +86,9 @@ class Agent(AgentBase):
         self.prompt = prompt
         self.tools = tools
         self.structured_output = structured_output
-        self.post_guard = post_guard
-        if self.post_guard is not None:
-            self.post_guard.name = f"{name}-{post_guard.name}"
+       # self.post_guard = post_guard
+       # if self.post_guard is not None:
+       #     self.post_guard.name = f"{name}-{post_guard.name}"
 
     def as_runnable(self) -> RunnableSequence:
         """Converts the agent to a runnable sequence.
@@ -135,7 +135,7 @@ def create_agent(
     llm: BaseChatModel,
     prompt: Optional[str] = None,
     tools: List[Tool] = [],
-    post_guard: Optional[Guard] = None,
+    #post_guard: Optional[Guard] = None,
     structured_output: Optional[Tool] = None,
 ) -> Agent:
     """Creates an agent.
@@ -157,7 +157,7 @@ def create_agent(
         llm=llm, 
         prompt=prompt, 
         tools=tools,
-        post_guard=post_guard,
+        #post_guard=post_guard,
         structured_output=structured_output,
     )
 

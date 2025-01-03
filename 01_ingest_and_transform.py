@@ -209,13 +209,13 @@ print(source_table_checkpoint_path)
 
 # COMMAND ----------
 
-spark.sql(f"""
-   DROP TABLE IF EXISTS {source_table_name}       
-""")
+# spark.sql(f"""
+#    DROP TABLE IF EXISTS {source_table_name}       
+# """)
 
 # COMMAND ----------
 
-# MAGIC %sh rm -rf /Volumes/dbcks_poc/paws/data/checkpoints/document_chunked
+#%sh rm -rf /Volumes/dbcks_poc/paws/data/checkpoints/document_chunked
 
 # COMMAND ----------
 

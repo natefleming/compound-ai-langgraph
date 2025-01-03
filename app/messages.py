@@ -1,8 +1,8 @@
 from typing import Any, Dict, List
 from langchain_core.runnables import Runnable
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from guardrails.guard import Guard
-from guardrails.classes.validation_outcome import ValidationOutcome
+#from guardrails.guard import Guard
+#from guardrails.classes.validation_outcome import ValidationOutcome
 
 
 def get_last_ai_message(messages: List[BaseMessage]) -> AIMessage:
@@ -33,28 +33,28 @@ def get_last_human_message(messages: List[BaseMessage]) -> HumanMessage:
             return m
     return None
 
-def apply_guard(messages: List[BaseMessage], guard: Guard) -> List[BaseMessage]:
-    """Applies guard validation to the last message in the list.
+# def apply_guard(messages: List[BaseMessage], guard: Guard) -> List[BaseMessage]:
+#     """Applies guard validation to the last message in the list.
 
-    Args:
-        messages (List[BaseMessage]): List of base messages.
-        guard (Guard): Guard object for validation.
+#     Args:
+#         messages (List[BaseMessage]): List of base messages.
+#         guard (Guard): Guard object for validation.
 
-    Returns:
-        List[BaseMessage]: List of base messages with guard validation applied to the last message.
-    """
-    last_message: AIMessage = messages[-1]
-    validation_outcome: ValidationOutcome = guard.validate(last_message.content)
-    if not validation_outcome.validation_passed:
-        failure_reasons: List[str] = (
-            [summary.failure_reason for summary in validation_outcome.validation_summaries]
-        )
-        failure_reasons = "; ".join(failure_reasons)
-        guard_message: AIMessage = AIMessage(content=f"Guard failed - {failure_reasons}")
-        if hasattr(last_message, "name"):
-            add_name(guard_message, last_message.name)
-        messages.append(guard_message)
-    return messages
+#     Returns:
+#         List[BaseMessage]: List of base messages with guard validation applied to the last message.
+#     """
+#     last_message: AIMessage = messages[-1]
+#     validation_outcome: ValidationOutcome = guard.validate(last_message.content)
+#     if not validation_outcome.validation_passed:
+#         failure_reasons: List[str] = (
+#             [summary.failure_reason for summary in validation_outcome.validation_summaries]
+#         )
+#         failure_reasons = "; ".join(failure_reasons)
+#         guard_message: AIMessage = AIMessage(content=f"Guard failed - {failure_reasons}")
+#         if hasattr(last_message, "name"):
+#             add_name(guard_message, last_message.name)
+#         messages.append(guard_message)
+#     return messages
 
 def first_message(payload: Dict[str, Any]) -> Dict[str, str]:
     """Retrieves the first message from the payload.

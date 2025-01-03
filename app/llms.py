@@ -2,7 +2,7 @@ from typing import Optional
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
-from langchain_databricks import ChatDatabricks
+from databricks_langchain import ChatDatabricks
 
 EndpointOrAlias = str
 
