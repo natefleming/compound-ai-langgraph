@@ -85,9 +85,8 @@ base_url: str = f"{workspace_host}/serving-endpoints/"
 #token: str = get_databricks_host_creds().token
 
 os.environ["DATABRICKS_HOST"] = f"https://{workspace_host}"
-os.environ["DATABRICKS_TOKEN"] =  dbutils.secrets.get(secret_scope, secret_name) #or token
-#os.environ["DATABRICKS_CLIENT_ID"] = dbutils.secrets.get(secret_scope, client_id)
-#os.environ["DATABRICKS_CLIENT_SECRET"] = dbutils.secrets.get(secret_scope, client_secret)
+os.environ["DATABRICKS_TOKEN"] = dbutils.secrets.get(secret_scope, secret_name)
+
 
 print(f"workspace_host: {workspace_host}")
 print(f"base_url: {base_url}")
@@ -173,11 +172,11 @@ model_info: mlflow.models.model.ModelInfo
 evaluation_result: EvaluationResult
 
 evalution_pdf: pd.DataFrame = spark.table(evaluation_table_name).toPandas()
-currated_evaluation_pdf: pd.DataFrame = spark.table(curated_evaluation_table_name).toPandas()
-currated_evaluation_pdf = None
+#currated_evaluation_pdf: pd.DataFrame = spark.table(curated_evaluation_table_name).toPandas()
+#currated_evaluation_pdf = None
 
 model_info, evaluation_result = (
-  log_and_evaluate_agent(run_name="chain", model_config=model_config, eval_df=currated_evaluation_pdf)
+  log_and_evaluate_agent(run_name="chain", model_config=model_config, eval_df=evalution_pdf)
 )
 
 
@@ -233,7 +232,11 @@ import time
 from mlflow.utils import databricks_utils as du
 
 
-from databricks.sdk.service.serving import EndpointStateReady, EndpointStateConfigUpdate
+from databricks.sdk.service.serving import (
+    EndpointStateReady, 
+    EndpointStateConfigUpdate, 
+    ServedModelInputWorkloadSize
+)
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.errors import ResourceDoesNotExist, NotFound, PermissionDenied
 from databricks.agents import deploy
@@ -247,9 +250,10 @@ deployment: Deployment = deploy(
     registered_model_name, 
     latest_model_version,
     scale_to_zero=True,
+    workload_size = ServedModelInputWorkloadSize.MEDIUM,
     environment_vars={
         #"DATABRICKS_TOKEN": f"{{secrets/{secret_scope}/{secret_name}}}", 
-        #"DATABRICKS_HOST": f"{{secrets/{scope}/databricks_host}}", 
+        #"DATABRICKS_HOST": f"{{secrets/{secret_scope}/{databricks_host}}}", 
         "DATABRICKS_HOST": os.environ["DATABRICKS_HOST"], 
         "DATABRICKS_TOKEN": os.environ["DATABRICKS_TOKEN"], 
     }

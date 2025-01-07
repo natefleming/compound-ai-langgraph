@@ -9,22 +9,6 @@
 
 # COMMAND ----------
 
-import os
-
-context = dbutils.entry_point.getDbutils().notebook().getContext()
-
-workspace_url: str = spark.conf.get("spark.databricks.workspaceUrl")
-client_id: str = context.apiToken().get()
-client_secret: str = context.apiToken().get()
-api_token: str = context.apiToken().get()
-
-
-# COMMAND ----------
-
-workspace_url
-
-# COMMAND ----------
-
 from typing import Any, Dict, Optional
 
 from mlflow.models import ModelConfig
@@ -47,6 +31,16 @@ primary_key: str = schema.get("primary_key")
 embedding_source_column: str = schema.get("embedding_source_column")
 embedding_model_endpoint_name: str = databricks_resources.get("embedding_model_endpoint_name")
 
+secret_scope: str = databricks_resources.get("scope_name")
+secret_name: str = databricks_resources.get("secret_name")
+client_id: str = databricks_resources.get("client_id")
+client_secret: str = databricks_resources.get("client_secret")
+
+print(f"{secret_scope=}")
+print(f"{secret_name=}")
+print(f"{client_id=}")
+print(f"{client_secret=}")
+
 print(f"{catalog_name=}")
 print(f"{database_name=}")
 print(f"{source_table_name=}")
@@ -59,12 +53,34 @@ print(f"{embedding_model_endpoint_name=}")
 
 # COMMAND ----------
 
+import os
+
+context = dbutils.entry_point.getDbutils().notebook().getContext()
+
+workspace_host: str = spark.conf.get("spark.databricks.workspaceUrl")
+
+os.environ["DATABRICKS_HOST"] = f"https://{workspace_host}"
+#os.environ["DATABRICKS_TOKEN"] =  dbutils.secrets.get(secret_scope, secret_name) #or token
+os.environ["DATABRICKS_CLIENT_ID"] = dbutils.secrets.get(secret_scope, client_id)
+os.environ["DATABRICKS_CLIENT_SECRET"] = dbutils.secrets.get(secret_scope, client_secret)
+
+print(f"workspace_host: {workspace_host}")
+
+
+# COMMAND ----------
+
+workspace_url: str = os.environ.get("DATABRICKS_HOST")
+client_id: str = os.environ.get("DATABRICKS_CLIENT_ID")
+client_secret: str = os.environ.get("DATABRICKS_CLIENT_SECRET")
+
+# COMMAND ----------
+
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.catalog import CatalogInfo, SchemaInfo
 
 import app.catalog 
 
-w: WorkspaceClient = WorkspaceClient()
+w: WorkspaceClient = WorkspaceClient(client_id=client_id, client_secret=client_secret)
 
 catalog: CatalogInfo 
 try:
@@ -86,7 +102,14 @@ from databricks.vector_search.client import VectorSearchClient
 
 from app.utils import endpoint_exists, wait_for_vs_endpoint_to_be_ready
 
-vsc: VectorSearchClient = VectorSearchClient()
+                                    
+vsc: VectorSearchClient = (
+    VectorSearchClient(
+        workspace_url=workspace_url, 
+        service_principal_client_id=client_id,
+        service_principal_client_secret=client_secret
+    )
+)
 
 if not endpoint_exists(vsc, vector_search_endpoint_name):
     vsc.create_endpoint(name=vector_search_endpoint_name, endpoint_type="STANDARD")
@@ -157,15 +180,6 @@ from databricks.vector_search.client import VectorSearchClient
 from databricks.vector_search.index import VectorSearchIndex
 
 
-workspace_url: str = os.environ.get("DATABRICKS_HOST")
-# client_id: str = os.environ.get("DATARBRICKS_CLIENT_ID")
-# client_secret: str = os.environ.get("DATARBRICKS_CLIENT_SECRET")
-personal_access_token: str = os.environ.get("DATARBRICKS_TOKEN")
-
-
-client_id = dbutils.secrets.get("dbcks_poc", "client_id")
-client_secret = dbutils.secrets.get("dbcks_poc", "client_secret")
-
 vsc: VectorSearchClient = VectorSearchClient(
     workspace_url=workspace_url,
     service_principal_client_id=client_id,
@@ -180,7 +194,7 @@ vsc: VectorSearchClient = VectorSearchClient(
 index: VectorSearchIndex = vsc.get_index(endpoint_name=vector_search_endpoint_name, index_name=vector_search_index)
 
 search_results: Dict[str, Any] = (
-    index.similarity_search(num_results=3, columns=["url", "content"], query_text=question)
+    index.similarity_search(num_results=3, columns=["source", "content"], query_text=question)
 )
 
 search_results

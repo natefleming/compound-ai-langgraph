@@ -38,8 +38,10 @@ from databricks.sdk.service.settings import CreateTokenResponse
 from databricks.sdk.service.workspace import SecretMetadata
 
 
-w: WorkspaceClient = WorkspaceClient()
-
+w: WorkspaceClient = WorkspaceClient(
+    client_id=dbutils.secrets.get(scope_name, client_id), 
+    client_secret=dbutils.secrets.get(scope_name, client_secret)
+)
 
 scopes: List[SecretScope] = w.secrets.list_scopes()
 if not any([scope.name == scope_name for scope in scopes]):

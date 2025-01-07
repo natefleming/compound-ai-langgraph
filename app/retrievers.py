@@ -9,7 +9,7 @@ import mlflow.models
 
 from langchain.schema import Document
 from typing import List
-
+import os
 
 def create_vector_search_retriever(
     endpoint_name: str,
@@ -19,7 +19,13 @@ def create_vector_search_retriever(
     doc_uri: Optional[str] = None,
     columns: Optional[List[str]] = None,
     parameters: Optional[Dict[str, Any]] = None,
+    client_id: Optional[str] = None,
+    client_secret: Optional[str] = None,
 ) -> VectorStoreRetriever:
+
+    if client_id and client_secret:
+        os.environ["DATABRICKS_CLIENT_ID"] = client_id
+        os.environ["DATABRICKS_CLIENT_SECRET"] = client_secret
 
     vector_search: DatabricksVectorSearch = DatabricksVectorSearch(
         index_name=index_name,

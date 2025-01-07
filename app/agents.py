@@ -344,7 +344,9 @@ def create_vector_search_agent(
     columns: Optional[List[str]] = None,
     parameters: Optional[Dict[str, Any]] = None,
     name: Optional[str] = "vector_search",
-    topics: Optional[str] = "process, guides, technical documentation, how-to"
+    topics: Optional[str] = "process, guides, technical documentation, how-to",
+    client_id: Optional[str] = None,
+    client_secret: Optional[str] = None,
 ) -> Agent:
     """Creates a Vector Search agent.
 
@@ -370,6 +372,8 @@ def create_vector_search_agent(
         doc_uri=doc_uri,
         columns=columns,
         parameters=parameters,
+        client_id=client_id,
+        client_secret=client_secret,
     )
 
     prompt: str = vector_search_agent_prompt(tool_name=vector_search_tool.name)

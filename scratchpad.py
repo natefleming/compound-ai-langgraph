@@ -37,18 +37,36 @@ _ = load_dotenv(find_dotenv())
 
 # COMMAND ----------
 
-import os 
-from mlflow.utils.databricks_utils import get_databricks_host_creds
+from typing import Any, Dict
+
+from mlflow.models import ModelConfig
+
+model_config_file: str = "model_config.yaml"
+model_config: ModelConfig = ModelConfig(development_config=model_config_file)
+
+databricks_resources: Dict[str, Any] = model_config.get("databricks_resources")
+
+secret_scope: str = databricks_resources.get("scope_name")
+secret_name: str = databricks_resources.get("secret_name")
+client_id: str = databricks_resources.get("client_id")
+client_secret: str = databricks_resources.get("client_secret")
+
+print(f"{secret_scope=}")
+print(f"{secret_name=}")
+print(f"{client_id=}")
+print(f"{client_secret=}")
+
+
+
+# COMMAND ----------
 
 workspace_host: str = spark.conf.get("spark.databricks.workspaceUrl")
 base_url: str = f"{workspace_host}/serving-endpoints/"
-token: str = get_databricks_host_creds().token
+#token: str = get_databricks_host_creds().token
 
-os.environ["DATABRICKS_HOST"] = f"https://{workspace_host}"
-os.environ["DATABRICKS_TOKEN"] = token
-
-print(f"workspace_host: {workspace_host}")
-print(f"base_url: {base_url}")
+workspace_url: str = f"https://{workspace_host}"
+client_id: str = dbutils.secrets.get(secret_scope, client_id)
+client_secret: str = dbutils.secrets.get(secret_scope, client_secret)
 
 # COMMAND ----------
 
@@ -65,8 +83,8 @@ import app.router
 import app.retrievers
 import app.tools
 import app.catalog
-import app.guardrails.validators
-import app.guardrails.guards
+# import app.guardrails.validators
+# import app.guardrails.guards
 
 # COMMAND ----------
 
@@ -124,6 +142,8 @@ vector_search_agent: Agent = create_vector_search_agent(
       vector_search_schema.get("document_uri"),
   ],
   parameters = retriever_config.get("parameters"),
+  client_id = client_id,
+  client_secret = client_secret
 )
 
 builder: GraphBuilder = (

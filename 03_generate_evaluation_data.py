@@ -66,6 +66,7 @@ question_guidelines = f"""
 - Only use questions that are relevant to the domain
 - Omit questions that are too broad or vague
 - Omit questions that do not have a clear answer
+- Omit questions that lack adequate content to be generated
 """
 
 num_evals: int = 20

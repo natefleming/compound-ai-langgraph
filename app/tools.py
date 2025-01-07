@@ -63,6 +63,8 @@ def create_vector_search_tool(
     doc_uri: Optional[str] = None,
     columns: Optional[List[str]] = None,
     parameters: Optional[Dict[str, Any]] = None,
+    client_id: Optional[str] = None,
+    client_secret: Optional[str] = None,
 ) -> Tool:
     """Creates a vector search tool.
 
@@ -87,6 +89,8 @@ def create_vector_search_tool(
         doc_uri=doc_uri,
         columns=columns,
         parameters=parameters,
+        client_id=client_id,
+        client_secret=client_secret,
     )
     
     vector_search_tool: Tool = vector_search_as_retriever.as_tool(
