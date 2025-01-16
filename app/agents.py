@@ -345,6 +345,7 @@ def create_vector_search_agent(
     parameters: Optional[Dict[str, Any]] = None,
     name: Optional[str] = "vector_search",
     topics: Optional[str] = "process, guides, technical documentation, how-to",
+    workspace_url: Optional[str] = None,
     client_id: Optional[str] = None,
     client_secret: Optional[str] = None,
 ) -> Agent:
@@ -372,6 +373,7 @@ def create_vector_search_agent(
         doc_uri=doc_uri,
         columns=columns,
         parameters=parameters,
+        workspace_url=workspace_url,
         client_id=client_id,
         client_secret=client_secret,
     )

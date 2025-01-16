@@ -77,19 +77,13 @@ print(f"{client_secret=}")
 
 # COMMAND ----------
 
-import os 
-from mlflow.utils.databricks_utils import get_databricks_host_creds
+import os
 
 workspace_host: str = spark.conf.get("spark.databricks.workspaceUrl")
 base_url: str = f"{workspace_host}/serving-endpoints/"
-#token: str = get_databricks_host_creds().token
 
-os.environ["DATABRICKS_HOST"] = f"https://{workspace_host}"
-os.environ["DATABRICKS_TOKEN"] = dbutils.secrets.get(secret_scope, secret_name)
-
-
-print(f"workspace_host: {workspace_host}")
-print(f"base_url: {base_url}")
+workspace_url: str = f"https://{workspace_host}"
+os.environ["DATABRICKS_HOST"] = workspace_url
 
 # COMMAND ----------
 
@@ -171,12 +165,12 @@ from mlflow.models.evaluation import EvaluationResult
 model_info: mlflow.models.model.ModelInfo
 evaluation_result: EvaluationResult
 
-evalution_pdf: pd.DataFrame = spark.table(evaluation_table_name).toPandas()
+evaluation_pdf: pd.DataFrame = spark.table(evaluation_table_name).toPandas()
 #currated_evaluation_pdf: pd.DataFrame = spark.table(curated_evaluation_table_name).toPandas()
 #currated_evaluation_pdf = None
 
 model_info, evaluation_result = (
-  log_and_evaluate_agent(run_name="chain", model_config=model_config, eval_df=evalution_pdf)
+  log_and_evaluate_agent(run_name="chain", model_config=model_config, eval_df=evaluation_pdf)
 )
 
 
@@ -212,7 +206,7 @@ payload: Dict[str, str] = {
     "messages": [
         {
             "role": "user",
-            "content": "Where can I order a printer for receipts?",
+            "content": "We are unable to order drinks from OBO. What should we do?",
             #"content": "How can we optimize clusters in Databricks?",
         }
     ]
@@ -223,6 +217,10 @@ config: Dict[str, str] = {
 }
 
 response = loaded_model.predict(payload)
+
+# COMMAND ----------
+
+f"{{{{secrets/{secret_scope}/{client_secret}}}}}"
 
 # COMMAND ----------
 
@@ -245,17 +243,21 @@ from databricks.agents.sdk_utils.entities import Deployment
 
 w: WorkspaceClient = WorkspaceClient()
 
+# os.environ["DATABRICKS_HOST"] = workspace_url
+# os.environ["DATABRICKS_CLIENT_ID"] = client_id 
+# os.environ["DATABRICKS_CLIENT_SECRET"] = client_secret
 
 deployment: Deployment = deploy(
     registered_model_name, 
     latest_model_version,
-    scale_to_zero=True,
+    scale_to_zero=False,
     workload_size = ServedModelInputWorkloadSize.MEDIUM,
     environment_vars={
         #"DATABRICKS_TOKEN": f"{{secrets/{secret_scope}/{secret_name}}}", 
         #"DATABRICKS_HOST": f"{{secrets/{secret_scope}/{databricks_host}}}", 
-        "DATABRICKS_HOST": os.environ["DATABRICKS_HOST"], 
-        "DATABRICKS_TOKEN": os.environ["DATABRICKS_TOKEN"], 
+        "DATABRICKS_HOST": workspace_url, 
+        "DATABRICKS_CLIENT_ID": f"{{{{secrets/{secret_scope}/{client_id}}}}}",
+        "DATABRICKS_CLIENT_SECRET": f"{{{{secrets/{secret_scope}/{client_secret}}}}}",
     }
 )
 

@@ -33,6 +33,7 @@ def vector_search_agent_prompt(tool_name: str) -> str:
         Query `{tool_name}` to retrieve information.
         Do not invent or add any information that is not directly retrieved from the tool.
         
+        
         Process Questions:
         When answering questions about processes, include all necessary steps in sequential order. Never skip any steps, even if they seem obvious.
         Use self-evaluation to ensure no step is omitted or incorrectly inferred.

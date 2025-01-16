@@ -52,6 +52,9 @@ vector_search_agent: Agent = create_vector_search_agent(
       vector_search_schema.get("document_uri"),
   ],
   parameters = retriever_config.get("parameters"),
+  workspace_url = os.getenv("DATABRICKS_HOST"),
+  client_id = os.getenv("DATABRICKS_CLIENT_ID"),
+  client_secret = os.getenv("DATABRICKS_CLIENT_SECRET"),
 )
 
 builder: GraphBuilder = (

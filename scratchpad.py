@@ -45,6 +45,7 @@ model_config_file: str = "model_config.yaml"
 model_config: ModelConfig = ModelConfig(development_config=model_config_file)
 
 databricks_resources: Dict[str, Any] = model_config.get("databricks_resources")
+retriever_config: Dict[str, Any] = model_config.get("retriever_config")
 
 secret_scope: str = databricks_resources.get("scope_name")
 secret_name: str = databricks_resources.get("secret_name")
@@ -60,6 +61,8 @@ print(f"{client_secret=}")
 
 # COMMAND ----------
 
+import os
+
 workspace_host: str = spark.conf.get("spark.databricks.workspaceUrl")
 base_url: str = f"{workspace_host}/serving-endpoints/"
 #token: str = get_databricks_host_creds().token
@@ -67,6 +70,11 @@ base_url: str = f"{workspace_host}/serving-endpoints/"
 workspace_url: str = f"https://{workspace_host}"
 client_id: str = dbutils.secrets.get(secret_scope, client_id)
 client_secret: str = dbutils.secrets.get(secret_scope, client_secret)
+
+
+os.environ["DATABRICKS_HOST"] = workspace_url
+os.environ["DATABRICKS_CLIENT_ID"] = client_id 
+os.environ["DATABRICKS_CLIENT_SECRET"] = client_secret
 
 # COMMAND ----------
 
@@ -142,8 +150,9 @@ vector_search_agent: Agent = create_vector_search_agent(
       vector_search_schema.get("document_uri"),
   ],
   parameters = retriever_config.get("parameters"),
-  client_id = client_id,
-  client_secret = client_secret
+  workspace_url = os.getenv("DATABRICKS_HOST"),
+  client_id = os.getenv("DATABRICKS_CLIENT_ID"),
+  client_secret = os.getenv("DATABRICKS_CLIENT_SECRET"),
 )
 
 builder: GraphBuilder = (

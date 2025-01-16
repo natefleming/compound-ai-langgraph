@@ -19,19 +19,21 @@ def create_vector_search_retriever(
     doc_uri: Optional[str] = None,
     columns: Optional[List[str]] = None,
     parameters: Optional[Dict[str, Any]] = None,
+    workspace_url: Optional[str] = None,
     client_id: Optional[str] = None,
     client_secret: Optional[str] = None,
 ) -> VectorStoreRetriever:
-
-    if client_id and client_secret:
-        os.environ["DATABRICKS_CLIENT_ID"] = client_id
-        os.environ["DATABRICKS_CLIENT_SECRET"] = client_secret
 
     vector_search: DatabricksVectorSearch = DatabricksVectorSearch(
         index_name=index_name,
         endpoint=endpoint_name,
         text_column=text_column,
         columns=columns,
+        client_args={
+            "workspace_url": workspace_url,
+            "service_principal_client_id": client_id,
+            "service_principal_client_secret": client_secret,
+        }
     )
     
     vector_search_as_retriever: VectorStoreRetriever = (
