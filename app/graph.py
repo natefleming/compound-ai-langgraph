@@ -14,7 +14,7 @@ from langgraph.prebuilt import ToolNode
 
 from mlflow.langchain.output_parsers import (
     StringResponseOutputParser,
-    ChatCompletionsOutputParser,
+    ChatCompletionsOutputParser
 )
 
 #from guardrails.guard import Guard

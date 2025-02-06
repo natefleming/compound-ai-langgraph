@@ -205,6 +205,27 @@ def router_prompt(agents: List['Agent'], default_agent: Optional['Agent'] = None
         Routing Criteria:
         {routing_criteria}
 
+        Examples:
+         
+         Question: We are unable to order drinks with OBO. What should we do?
+         Answer: vector_search
+         Reasoning: This question is about the process of ordering drinks which can be found using the vector database
+
+         Question: Who has the most tickets? (by individual, by subgroup)
+         Answer: genie
+         Reasoning: The answer to this question is found by querying service now using the genie tool
+
+         Question: Who are the top 5 agents with the highest resolution rates this quarter based on number of tickets they have resolved?
+         Answer: genie
+         Reasoning: The answer to this question is found by querying service now using the genie tool
+
+         Question: How can we order printer tape?
+         Answer: vector_search
+
+         Question: Why is the sky blue?
+         Answer: vector_search
+         Reasoning: This answer does not fall into any category so the default agent is called.
+
 
     """).strip()
 

@@ -301,7 +301,7 @@ def create_genie_agent(
     workspace_host: Optional[str] = None,
     token: Optional[str] = None,
     name: Optional[str] = "genie",
-    topics: Optional[str] = "Databricks Genie tools."
+    topics: Optional[str] = "genie, incident status, tickets, servicenow"
 ) -> Agent:
     """Creates a Genie agent.
 

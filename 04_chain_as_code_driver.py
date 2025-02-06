@@ -95,10 +95,10 @@ from mlflow.tracking import MlflowClient
 from mlflow.models.model import ModelInfo
 from mlflow.models.signature import ModelSignature, ParamSchema
 from mlflow.types import DataType, ParamSpec
-from mlflow.models.rag_signatures import (
-    ChatCompletionRequest,
-    ChatCompletionResponse,
-)
+# from mlflow.models.rag_signatures import (
+#     ChatCompletionRequest,
+#     ChatCompletionResponse,
+# )
 from mlflow.models.evaluation import EvaluationResult
 
 import pandas as pd
@@ -106,10 +106,7 @@ import pandas as pd
 
 mlflow.set_registry_uri("databricks-uc")
  
-signature: ModelSignature = ModelSignature(
-    inputs=ChatCompletionRequest(),
-    outputs=ChatCompletionResponse(),
-)
+
 
 def log_and_evaluate_agent(
     run_name: str, 
@@ -128,20 +125,21 @@ def log_and_evaluate_agent(
             code_paths=["app"],
             model_config=model_config,
             artifact_path="chain",
-            signature=signature,
-            example_no_conversion=True,
+           # signature=signature,
+            input_example = {
+                "messages": [
+                    {"role": "user", "content": "What is lakehouse monitoring?"}
+                ]
+            },
             pip_requirements=[
-                "mlflow==2.19.0",
-                "langchain==0.3.13",
-                "langchain_openai==0.2.13",
-                "databricks_langchain==0.1.1",
-                "langchain_community==0.3.13",
-                "langgraph==0.2.60",
-                "databricks_sdk==0.40.0",
-                "databricks_vectorsearch==0.43",
-                # "guardrails-ai==0.6.1",
-                # "nltk==3.9.1",
-                # "presidio-analyzer==2.2.356",
+                "mlflow==2.20.0",
+                "langchain==0.3.17",
+                "langchain_openai==0.3.3",
+                "databricks_langchain==0.2.0",
+                "langchain_community==0.3.16",
+                "langgraph==0.2.68",
+                "databricks_sdk==0.41.0",
+                "databricks_vectorsearch==0.45",
             ],
         )
 
@@ -170,7 +168,7 @@ evaluation_pdf: pd.DataFrame = spark.table(evaluation_table_name).toPandas()
 #currated_evaluation_pdf = None
 
 model_info, evaluation_result = (
-  log_and_evaluate_agent(run_name="chain", model_config=model_config, eval_df=evaluation_pdf)
+  log_and_evaluate_agent(run_name="chain", model_config=model_config, eval_df=None)
 )
 
 
@@ -279,18 +277,25 @@ from typing import Dict
 import json
 import requests
 
+from mlflow.utils.databricks_utils import get_databricks_host_creds
+
+token: str = get_databricks_host_creds().token
+os.environ["DATABRICKS_TOKEN"] = token
+
 
 payload: Dict[str, str] = {
     "messages": [
         {
             "role": "user",
             #"content": "How many rows of documentation are there in the genie space?",
-            "content": "How can we optimize clusters in Databricks?",
+            "content": "We are unable to order drinks with OBO. What should we do?",
         }
     ]
 }
 
-url: str = f"https://{workspace_host}/serving-endpoints/agents_nfleming-default-compound_ai_langgraph/invocations"
+
+
+url: str = f"https://{workspace_host}/serving-endpoints/agents_dbcks_poc-paws-compound_ai_langgraph/invocations"
 headers: Dict[str, str] = {'Authorization': f'Bearer {os.environ.get("DATABRICKS_TOKEN")}', 'Content-Type': 'application/json'}
 response = requests.request(method='POST', headers=headers, url=url, json=payload)
 if response.status_code != 200:
@@ -315,7 +320,7 @@ def ask(message: str) -> str:
     messages.append(ChatMessage(content=message, role=ChatMessageRole.USER))
     print(messages)
     response: QueryEndpointResponse = w.serving_endpoints.query(
-        name="agents_nfleming-default-compound_ai_langgraph",
+        name="agents_dbcks_poc-paws-compound_ai_langgraph",
         messages=messages,
         temperature=1.0,
         stream=False,
@@ -330,15 +335,19 @@ def ask(message: str) -> str:
 
 messages: List[ChatMessage] = []
 
-message: str = "How many rows of documentation are there in the genie space?"
+message: str = "We are unable to order drinks with OBO. What should we do?"
 messages.append(ChatMessage(content=message, role=ChatMessageRole.USER))
 response: QueryEndpointResponse = w.serving_endpoints.query(
-    name="agents_nfleming-default-compound_ai_langgraph",
+    name="agents_dbcks_poc-paws-compound_ai_langgraph",
     messages=messages,
     temperature=1.0,
     stream=False,
 )
 response
+
+
+# COMMAND ----------
+
 
 
 # COMMAND ----------

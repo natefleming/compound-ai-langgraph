@@ -83,6 +83,10 @@ def latest_message_content(chain: Runnable, messages: List[BaseMessage]):
     Returns:
         str: Content of the latest message.
     """
+    
+    if isinstance(messages, dict) and "messages" in messages:
+        messages = messages["messages"]
+
     return chain.invoke(messages)[-1].content
 
 def get_name(message: AIMessage) -> str:

@@ -194,6 +194,41 @@ response
 
 # COMMAND ----------
 
+from typing import List
+
+from langchain_core.messages import HumanMessage
+
+mlflow.langchain.autolog(disable=False)
+
+message: str = "Where can I order a printer for receipts?"
+messages: List[HumanMessage] = [HumanMessage(content=message)]
+config: Dict[str, Any] = {
+    "configurable": {"thread_id": 42}
+}
+
+response: Dict[str, Any] = chain.invoke(messages, config=config)
+response
+
+# COMMAND ----------
+
+
+from typing import List
+
+from langchain_core.messages import HumanMessage
+
+mlflow.langchain.autolog(disable=False)
+
+message: str = "What are the top 5 configuration items?"
+messages: List[HumanMessage] = [HumanMessage(content=message)]
+config: Dict[str, Any] = {
+    "configurable": {"thread_id": 42}
+}
+
+response: Dict[str, Any] = chain.invoke(messages, config=config)
+response
+
+# COMMAND ----------
+
 from pyspark.sql import DataFrame
 import pyspark.sql.functions as F
 
