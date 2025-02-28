@@ -107,6 +107,12 @@ import pandas as pd
 mlflow.set_registry_uri("databricks-uc")
  
 
+signature: ModelSignature = ModelSignature(
+    inputs=ChatCompletionRequest(),
+    outputs=ChatCompletionResponse(),
+)
+
+
 
 def log_and_evaluate_agent(
     run_name: str, 
@@ -252,10 +258,16 @@ deployment: Deployment = deploy(
     workload_size = ServedModelInputWorkloadSize.MEDIUM,
     environment_vars={
         #"DATABRICKS_TOKEN": f"{{secrets/{secret_scope}/{secret_name}}}", 
+
         #"DATABRICKS_HOST": f"{{secrets/{secret_scope}/{databricks_host}}}", 
         "DATABRICKS_HOST": workspace_url, 
         "DATABRICKS_CLIENT_ID": f"{{{{secrets/{secret_scope}/{client_id}}}}}",
         "DATABRICKS_CLIENT_SECRET": f"{{{{secrets/{secret_scope}/{client_secret}}}}}",
+
+        #"DATABRICKS_HOST": f"{{secrets/{scope}/databricks_host}}", 
+        #"DATABRICKS_HOST": os.environ["DATABRICKS_HOST"], 
+        #"DATABRICKS_TOKEN": os.environ["DATABRICKS_TOKEN"], 
+
     }
 )
 
