@@ -239,12 +239,15 @@ print("\n".join(pip_requirements))
 # MAGIC     ) -> ChatAgentResponse:
 # MAGIC         request = {"messages": self._convert_messages_to_dict(messages)}
 # MAGIC
-# MAGIC         messages = []
+# MAGIC         messages: list[ChatAgentMessage] = []
 # MAGIC         for event in self.agent.stream(request, stream_mode="updates", config=custom_inputs):
 # MAGIC             for node_data in event.values():
-# MAGIC                 messages.extend(
-# MAGIC                     ChatAgentMessage(**msg) for msg in  node_data.get("messages", [])
-# MAGIC                 )
+# MAGIC                 for msg in node_data.get("messages", []):
+# MAGIC                     if isinstance(msg, BaseMessage):
+# MAGIC                         msg = parse_message(msg)
+# MAGIC                     messages.append(ChatAgentMessage(**msg))
+# MAGIC               
+# MAGIC
 # MAGIC         return ChatAgentResponse(messages=messages)
 # MAGIC
 # MAGIC     def predict_stream(
@@ -257,31 +260,10 @@ print("\n".join(pip_requirements))
 # MAGIC
 # MAGIC         for event in self.agent.stream(request, stream_mode="updates", config=custom_inputs):
 # MAGIC           for node_data in event.values():
-# MAGIC             yield from (
-# MAGIC               ChatAgentChunk(**{"delta": msg}) for msg in node_data.get("messages", [])
-# MAGIC             )
-# MAGIC
-# MAGIC         # for msg, _ in self.agent.stream(request, stream_mode="messages", config=custom_inputs):
-# MAGIC         #   msg: ChatMessageChunk
-# MAGIC         #   if not msg.content:
-# MAGIC         #     continue
-# MAGIC         #   chat_agent_message: ChatAgentMessage = self._langchain_chunk_to_mlflow_chunk(msg)
-# MAGIC         #   chat_agent_chunk: ChatAgentChunk = ChatAgentChunk(delta=chat_agent_message)
-# MAGIC         #   yield chat_agent_chunk
-# MAGIC
-# MAGIC     def _langchain_chunk_to_mlflow_chunk(self, langchain_chunk: ChatMessageChunk) -> ChatAgentMessage:
-# MAGIC         role_mapping = {
-# MAGIC             HumanMessageChunk: "user",
-# MAGIC             AIMessageChunk: "assistant",
-# MAGIC             SystemMessageChunk: "system",
-# MAGIC             ToolMessageChunk: "tool",
-# MAGIC         }
-# MAGIC         chunk_class = langchain_chunk.__class__
-# MAGIC         role = role_mapping.get(chunk_class)
-# MAGIC         if not role:
-# MAGIC             raise ValueError(f"Unsupported LangChain message type: {chunk_class.__name__}")
-# MAGIC         
-# MAGIC         return ChatAgentMessage(role=role, content=langchain_chunk.content)
+# MAGIC               for msg in node_data.get("messages", []):
+# MAGIC                 if isinstance(msg, BaseMessage):
+# MAGIC                     msg = parse_message(msg)
+# MAGIC                     yield ChatAgentChunk(**{"delta": msg})
 # MAGIC
 # MAGIC
 # MAGIC app = LangGraphChatAgent(graph)
