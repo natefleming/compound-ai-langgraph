@@ -197,6 +197,8 @@ print(pip_requirements)
 
 import mlflow 
 
+from agent_as_code import process_messages
+
 from langchain_core.messages import HumanMessage
 
 messages = [HumanMessage(content="Show me the sales dashboard")]
@@ -205,25 +207,10 @@ response
 
 # COMMAND ----------
 
-response
-
-# COMMAND ----------
-
 import mlflow
-from mlflow.types import DataType, Schema, ColSpec
 from mlflow.models.rag_signatures import StringResponse, ChatCompletionRequest
 
-# Create input schema (single string input)
-input_schema = Schema([
-    ColSpec(type=DataType.string, name="input")
-])
 
-# Create output schema (single string output)
-output_schema = Schema([
-    ColSpec(type=DataType.string, name="output")
-])
-
-# Create the model signature
 model_signature = mlflow.models.ModelSignature(
     inputs=ChatCompletionRequest,
     outputs=StringResponse
